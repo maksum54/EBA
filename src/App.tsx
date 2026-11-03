@@ -8,9 +8,9 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ProyekDetail from './pages/ProyekDetail'
 import Laporan from './pages/Laporan'
+import Pembelian from './pages/Pembelian'
 import {
-  BiayaPage, GajiPage, KaryawanPage, KasbonPage, KlienPage, ManualPage, PembelianPage,
-  ProyekPage, RealisasiPage, SupplierPage, TerminPage,
+  BiayaPage, GajiPage, KaryawanPage, KasbonPage, KlienPage, ManualPage, ProyekPage, RealisasiPage, SupplierPage, TerminPage,
 } from './pages/modules'
 
 export default function App() {
@@ -46,7 +46,7 @@ export default function App() {
           <Route path="proyek" element={<ProyekPage />} />
           <Route path="proyek/:id" element={<ProyekDetail />} />
           <Route path="termin" element={<TerminPage />} />
-          <Route path="pembelian" element={<PembelianPage />} />
+          <Route path="pembelian" element={<Pembelian />} />
           <Route path="kasbon" element={<KasbonPage />} />
           <Route path="realisasi" element={<RealisasiPage />} />
           <Route path="gaji" element={<GajiPage />} />

@@ -13,6 +13,13 @@ export default function Dashboard() {
   const { t, lang } = useT()
   const [laba, setLaba] = useState<Laba[]>([])
   const [saldo, setSaldo] = useState({ bank: 0, utang: 0, kasbon: 0, piutang: 0 })
+  const [telat, setTelat] = useState(0)
+
+  // Utang supplier yang sudah lewat jatuh tempo (merah di dashboard)
+  useEffect(() => {
+    supabase.from('v_pembelian').select('sisa').eq('lewat_tempo', true)
+      .then(({ data }) => setTelat(((data as { sisa: number }[]) || []).reduce((a, r) => a + Number(r.sisa), 0)))
+  }, [])
 
   useEffect(() => {
     (async () => {
@@ -49,6 +56,11 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+      {telat > 0 && (
+        <Link to="/pembelian" className="block rounded-lg border border-eba-500 bg-eba-50 p-3 text-sm text-eba-700 dark:bg-eba-900/30 dark:text-eba-100">
+          ⚠ {t('utang_lewat_tempo')}: <b className="tabular-nums">{rp(telat)}</b>
+        </Link>
+      )}
 
       <div className="card overflow-x-auto p-0">
         <div className="border-b border-gray-200 px-4 py-3 font-semibold dark:border-gray-700">{t('laba_proyek')}</div>

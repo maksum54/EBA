@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import CrudPage, { type Field } from '../components/CrudPage'
 import { useT } from '../lib/i18n'
-import { STATUS_BAYAR, STATUS_KASBON, STATUS_PROYEK, STATUS_TERMIN, TIPE_GAJI } from '../lib/options'
+import { STATUS_KASBON, STATUS_PROYEK, STATUS_TERMIN, TIPE_GAJI } from '../lib/options'
 
 // PENTING: daftar kolom didefinisikan di luar komponen supaya tidak dibuat ulang tiap render.
 type R = Record<string, unknown>
@@ -31,13 +31,6 @@ export const F_TERMIN: Field[] = [
   { key: 'tgl_tagih', type: 'date', defaultValue: '' }, { key: 'tgl_terima', type: 'date', defaultValue: '' },
   { key: 'no_bukti_potong', type: 'text', hideInTable: true },
 ]
-export const F_PEMBELIAN: Field[] = [
-  { key: 'tanggal', type: 'date' }, refProyek('kantor'),
-  { key: 'supplier_id', type: 'ref', ref: { table: 'supplier', label: (r) => String(r.nama) } },
-  { key: 'uraian', type: 'text', required: true }, { key: 'jumlah', type: 'money' },
-  { key: 'status_bayar', type: 'select', options: STATUS_BAYAR }, { key: 'tgl_lunas', type: 'date', defaultValue: '' },
-  { key: 'nota_url', type: 'url' },
-]
 export const F_KASBON: Field[] = [
   { key: 'tanggal', type: 'date' },
   { key: 'karyawan_id', type: 'ref', ref: { table: 'karyawan', label: (r) => String(r.nama) } },
@@ -48,7 +41,7 @@ export const F_KASBON: Field[] = [
 export const F_REALISASI: Field[] = [
   { key: 'kasbon_id', type: 'ref', ref: { table: 'kasbon', label: (r) => `#${r.id} · ${r.keperluan || ''} (${r.tanggal})` } },
   { key: 'tanggal', type: 'date' }, { key: 'uraian', type: 'text', required: true },
-  { key: 'jumlah', type: 'money' }, { key: 'nota_url', type: 'url' },
+  { key: 'jumlah', type: 'money' }, { key: 'foto', type: 'photos' },
 ]
 export const F_GAJI: Field[] = [
   { key: 'tanggal', type: 'date' }, { key: 'periode', type: 'text', required: true },
@@ -76,7 +69,6 @@ export function ProyekPage() {
     rowAction={(r) => <Link className="text-eba-600 hover:underline" to={`/proyek/${r.id}`}>{t('detail')}</Link>} />
 }
 export const TerminPage = () => { const { t } = useT(); return <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} onFormChange={terminCalc} /> }
-export const PembelianPage = () => { const { t } = useT(); return <CrudPage table="pembelian" title={t('pembelian')} fields={F_PEMBELIAN} orderBy="tanggal" /> }
 export const KasbonPage = () => { const { t } = useT(); return <CrudPage table="kasbon" title={t('kasbon')} hint={t('hint_kasbon')} fields={F_KASBON} orderBy="tanggal" /> }
 export const RealisasiPage = () => { const { t } = useT(); return <CrudPage table="kasbon_realisasi" title={t('realisasi')} fields={F_REALISASI} orderBy="tanggal" /> }
 export const GajiPage = () => { const { t } = useT(); return <CrudPage table="penggajian" title={t('penggajian')} fields={F_GAJI} orderBy="tanggal" /> }

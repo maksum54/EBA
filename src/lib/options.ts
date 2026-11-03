@@ -16,6 +16,13 @@ export const STATUS_BAYAR: Opt[] = [
   { v: 'lunas', id: 'Lunas', en: 'Paid' },
   { v: 'utang', id: 'Utang', en: 'Payable' },
 ]
+export const KATEGORI_BELI: Opt[] = [
+  { v: 'Material', id: 'Material', en: 'Materials' },
+  { v: 'Sewa Alat', id: 'Sewa Alat', en: 'Equipment Rental' },
+  { v: 'Subkon', id: 'Subkon', en: 'Subcontractor' },
+  { v: 'Transport', id: 'Transport / Ongkir', en: 'Transport / Delivery' },
+  { v: 'Alat Habis Pakai', id: 'Alat Habis Pakai', en: 'Consumables' },
+]
 export const STATUS_KASBON: Opt[] = [
   { v: 'terbuka', id: 'Terbuka', en: 'Open' },
   { v: 'selesai', id: 'Selesai', en: 'Settled' },

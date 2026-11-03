@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
 import type { Opt } from '../lib/options'
+import FotoNota, { thumb } from './FotoNota'
 
 /**
  * Halaman tabel + form generik. Setiap modul (proyek, termin, pembelian, dst.)
@@ -13,7 +14,7 @@ type Row = Record<string, unknown> & { id: number }
 
 export type Field = {
   key: string
-  type: 'text' | 'number' | 'money' | 'date' | 'select' | 'ref' | 'bool' | 'url'
+  type: 'text' | 'number' | 'money' | 'date' | 'select' | 'ref' | 'bool' | 'url' | 'photos'
   options?: Opt[]                 // untuk 'select'
   ref?: { table: string; label: (r: Row) => string; nullLabel?: string; filter?: Record<string, unknown> } // untuk 'ref'
   required?: boolean
@@ -66,7 +67,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     const f: Record<string, unknown> = {}
     for (const fl of fields) {
       if (fl.readOnly) continue
-      f[fl.key] = fl.defaultValue ?? (fl.type === 'date' ? today() : fl.type === 'bool' ? true :
+      f[fl.key] = fl.defaultValue ?? (fl.type === 'date' ? today() : fl.type === 'bool' ? true : fl.type === 'photos' ? [] :
         fl.type === 'select' ? fl.options?.[0]?.v : fl.type === 'money' || fl.type === 'number' ? 0 : '')
     }
     return f
@@ -122,6 +123,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
       case 'select': return optLabel(f, v)
       case 'ref': return refLabel(f, v)
       case 'bool': return v ? '✓' : '—'
+      case 'photos': return <div className="flex gap-1">{((v as string[]) || []).slice(0, 3).map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={thumb(u)} alt="nota" className="h-8 w-8 rounded object-cover" /></a>)}</div>
       case 'url': return v ? <a className="text-eba-600 underline" href={String(v)} target="_blank" rel="noreferrer">nota</a> : '-'
       default: return String(v ?? '-')
     }
@@ -153,6 +155,8 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
                     <option value="">{t(f.ref?.nullLabel || 'pilih')}</option>
                     {(refs[f.key] || []).map((r) => <option key={r.id} value={r.id}>{f.ref!.label(r)}</option>)}
                   </select>
+                ) : f.type === 'photos' ? (
+                  <FotoNota value={(form[f.key] as string[]) || []} onChange={(v) => setField(f.key, v)} />
                 ) : f.type === 'bool' ? (
                   <input type="checkbox" checked={Boolean(form[f.key])} onChange={(e) => setField(f.key, e.target.checked)} />
                 ) : (
