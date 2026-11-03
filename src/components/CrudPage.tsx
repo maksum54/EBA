@@ -4,6 +4,7 @@ import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
 import type { Opt } from '../lib/options'
 import FotoNota, { thumb } from './FotoNota'
+import { MoneyInput, QtyInput } from './NumInput'
 
 /**
  * Halaman tabel + form generik. Setiap modul (proyek, termin, pembelian, dst.)
@@ -159,14 +160,14 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
                   <FotoNota value={(form[f.key] as string[]) || []} onChange={(v) => setField(f.key, v)} />
                 ) : f.type === 'bool' ? (
                   <input type="checkbox" checked={Boolean(form[f.key])} onChange={(e) => setField(f.key, e.target.checked)} />
+                ) : f.type === 'money' ? (
+                  <MoneyInput className="input text-right" value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
+                ) : f.type === 'number' ? (
+                  <QtyInput value={form[f.key] as number} onChange={(v) => setField(f.key, v)} />
                 ) : (
                   <input className="input"
-                    type={f.type === 'money' || f.type === 'number' ? 'number' : f.type === 'date' ? 'date' : f.type === 'url' ? 'url' : 'text'}
-                    step={f.type === 'money' ? '1' : undefined}
+                    type={f.type === 'date' ? 'date' : f.type === 'url' ? 'url' : 'text'}
                     value={String(form[f.key] ?? '')} onChange={(e) => setField(f.key, e.target.value)} />
-                )}
-                {f.type === 'money' && Number(form[f.key]) > 0 && (
-                  <span className="mt-0.5 block text-xs text-gray-500">{rp(Number(form[f.key]))}</span>
                 )}
               </label>
             ))}

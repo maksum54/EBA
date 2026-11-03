@@ -129,6 +129,7 @@ const dict: Record<string, [string, string]> = {
   gm_dibayar: ['Sudah dibayar', 'Paid'],
   gm_diubah: ['Diubah', 'Edited'],
   gm_diperbarui: ['gaji diperbarui', 'payments updated'],
+  gm_tidak_ada_perubahan: ['Semua data minggu ini sudah tersimpan. Ubah angka di tabel dulu, lalu klik Simpan.', 'Everything is already saved. Change a value first, then click Save.'],
   gm_akan_disimpan: ['Akan disimpan', 'To be saved'],
   gm_ttd: ['Tanda Tangan', 'Signature'],
   gm_dibuat: ['Dibuat oleh,', 'Prepared by,'],

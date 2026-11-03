@@ -4,6 +4,7 @@ import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
 import { KATEGORI_BELI } from '../lib/options'
 import FotoNota, { thumb } from '../components/FotoNota'
+import { MoneyInput, QtyInput } from '../components/NumInput'
 
 /**
  * Pembelian: satu nota = header + banyak barang (volume × harga satuan).
@@ -156,9 +157,9 @@ export default function Pembelian() {
               {items.map((it, idx) => (
                 <div key={idx} className="grid grid-cols-12 gap-2 rounded-md border border-gray-100 p-2 dark:border-gray-800 sm:border-0 sm:p-0">
                   <input className="input col-span-12 sm:col-span-4" placeholder={t('nama_barang')} value={it.nama} onChange={(e) => setItem(idx, 'nama', e.target.value)} />
-                  <input className="input col-span-3 sm:col-span-1" type="number" step="any" placeholder={t('volume')} value={it.volume} onChange={(e) => setItem(idx, 'volume', e.target.value)} />
+                  <QtyInput className="input col-span-3 sm:col-span-1" placeholder={t('volume')} value={it.volume} onChange={(v) => setItem(idx, 'volume', String(v))} />
                   <input className="input col-span-3 sm:col-span-2" placeholder={t('satuan')} value={it.satuan} onChange={(e) => setItem(idx, 'satuan', e.target.value)} />
-                  <input className="input col-span-6 sm:col-span-2" type="number" placeholder={t('harga_satuan')} value={it.harga_satuan} onChange={(e) => setItem(idx, 'harga_satuan', e.target.value)} />
+                  <MoneyInput className="input col-span-6 sm:col-span-2 text-right" placeholder={t('harga_satuan')} value={it.harga_satuan} onChange={(v) => setItem(idx, 'harga_satuan', String(v))} />
                   <div className="col-span-10 self-center text-right text-sm tabular-nums sm:col-span-2">{rp(subtotal(it))}</div>
                   <button type="button" className="col-span-2 text-gray-400 hover:text-red-600 sm:col-span-1" onClick={() => setItems((xs) => xs.length > 1 ? xs.filter((_, i) => i !== idx) : [itemKosong()])} aria-label="hapus">✕</button>
                 </div>
@@ -174,7 +175,7 @@ export default function Pembelian() {
             <div className="grid gap-3 sm:grid-cols-2">
               <L k="bayar_awal">
                 <div className="flex gap-2">
-                  <input type="number" className="input" value={form.bayar_awal ?? 0} onChange={(e) => setForm({ ...form, bayar_awal: e.target.value })} />
+                  <MoneyInput className="input text-right" value={form.bayar_awal} onChange={(v) => setForm({ ...form, bayar_awal: v })} />
                   <button type="button" className="btn-ghost" onClick={() => setForm({ ...form, bayar_awal: total })}>{t('isi_lunas')}</button>
                 </div>
                 <span className="mt-0.5 block text-xs text-gray-500">{t('hint_bayar_awal')}</span>
@@ -296,7 +297,7 @@ function PanelBayar({ nota, onClose }: { nota: Nota; onClose: () => void }) {
         <div className="grid gap-2 sm:grid-cols-4">
           <input type="date" className="input" value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
           <div className="flex gap-2">
-            <input type="number" className="input" value={jumlah} onChange={(e) => setJumlah(e.target.value)} />
+            <MoneyInput className="input text-right" value={jumlah} onChange={(v) => setJumlah(v)} />
             <button type="button" className="btn-ghost" onClick={() => setJumlah(sisa)}>{t('isi_lunas')}</button>
           </div>
           <input className="input" placeholder={t('catatan')} value={catatan} onChange={(e) => setCatatan(e.target.value)} />

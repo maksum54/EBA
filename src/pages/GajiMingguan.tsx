@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
 import Kop from '../components/Kop'
+import { MoneyInput, QtyInput } from '../components/NumInput'
 
 /**
  * Gaji Mingguan Massal — khusus pekerja harian (tipe gaji "mingguan").
@@ -98,7 +99,7 @@ export default function GajiMingguan() {
   }
 
   const simpan = async () => {
-    if (!baru.length && !berubah.length) return
+    if (!baru.length && !berubah.length) { setErr(''); setMsg(t('gm_tidak_ada_perubahan')); return }
     setBusy(true); setErr(''); setMsg('')
     // 1) perbarui baris yang diubah
     for (const k of berubah) {
@@ -190,10 +191,10 @@ export default function GajiMingguan() {
                       {s && !beda(k) && <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800 dark:bg-green-900/40 dark:text-green-300">✓ {t('gm_dibayar')}</span>}
                       {beda(k) && <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">✎ {t('gm_diubah')}</span>}
                     </td>
-                    <td className="td text-center"><input type="number" min={0} max={7} step={0.5} placeholder="0" className="input mx-auto w-16 text-center" value={b.hari} onChange={(e) => set(k.id, 'hari', e.target.value)} /></td>
-                    <td className="td text-center"><input type="number" className="input mx-auto w-28 text-right" value={b.tarif} onChange={(e) => set(k.id, 'tarif', e.target.value)} /></td>
-                    <td className="td text-center"><input type="number" min={0} step={0.5} placeholder="0" className="input mx-auto w-16 text-center" value={b.jam} onChange={(e) => set(k.id, 'jam', e.target.value)} /></td>
-                    <td className="td text-center"><input type="number" className="input mx-auto w-24 text-right" value={b.tl} onChange={(e) => set(k.id, 'tl', e.target.value)} />
+                    <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" value={b.hari} onChange={(v) => set(k.id, 'hari', v)} /></td>
+                    <td className="td text-center"><MoneyInput className="input mx-auto w-28 text-right" value={b.tarif} onChange={(v) => set(k.id, 'tarif', v)} /></td>
+                    <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" value={b.jam} onChange={(v) => set(k.id, 'jam', v)} /></td>
+                    <td className="td text-center"><MoneyInput className="input mx-auto w-24 text-right" value={b.tl} onChange={(v) => set(k.id, 'tl', v)} />
                       {uangLembur(b) > 0 && <div className="mt-0.5 text-xs text-gray-500 tabular-nums">= {rp(uangLembur(b))}</div>}
                     </td>
                     <td className="td">
@@ -219,7 +220,7 @@ export default function GajiMingguan() {
             {berubah.length > 0 && <div><div className="text-xs text-gray-500">{t('gm_diubah')}</div><div className="font-semibold tabular-nums text-amber-600">{berubah.length} {t('gm_orang')}</div></div>}
             {baru.length > 0 && <div><div className="text-xs text-gray-500">{t('gm_akan_disimpan')}</div><div className="font-semibold tabular-nums text-eba-600">{baru.length} {t('gm_orang')} · {rp(totalBaru)}</div></div>}
           </div>
-          <button className="btn-primary px-5 py-2" disabled={busy || (!baru.length && !berubah.length)} onClick={simpan}>{t('simpan')}</button>
+          <button className="btn-primary px-5 py-2" disabled={busy} onClick={simpan}>{t('simpan')}</button>
         </div>
       </div>
 
