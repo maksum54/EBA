@@ -5,6 +5,7 @@ import { rp, tgl, today } from '../lib/format'
 import type { Opt } from '../lib/options'
 import FotoNota, { thumb } from './FotoNota'
 import { MoneyInput, QtyInput } from './NumInput'
+import { ambilRef, segarkan } from '../lib/cache'
 
 /**
  * Halaman tabel + form generik. Setiap modul (proyek, termin, pembelian, dst.)
@@ -48,17 +49,16 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     setLoading(true)
     let q = supabase.from(table).select('*').order(orderBy, { ascending: false })
     for (const [k, v] of Object.entries(JSON.parse(fixedKey))) q = q.eq(k, v as never)
-    const { data, error } = await q
+    // Ambil data utama + semua dropdown relasi SEKALIGUS (paralel), dropdown dari cache.
+    const refFields = fields.filter((f) => f.type === 'ref')
+    const [main, ...refData] = await Promise.all([
+      q,
+      ...refFields.map((f) => ambilRef(f.ref!.table, f.ref!.filter)),
+    ])
+    const { data, error } = main as { data: Row[] | null; error: { message: string } | null }
     if (error) setErr(error.message)
-    setRows((data as Row[]) || [])
-    // ambil data dropdown relasi (proyek, supplier, karyawan, ...)
-    const r: Record<string, Row[]> = {}
-    for (const f of fields.filter((f) => f.type === 'ref')) {
-      let rq = supabase.from(f.ref!.table).select('*').order('id', { ascending: false })
-      for (const [k, v] of Object.entries(f.ref!.filter || {})) rq = rq.eq(k, v as never)
-      r[f.key] = ((await rq).data as Row[]) || []
-    }
-    setRefs(r)
+    setRows(data || [])
+    setRefs(Object.fromEntries(refFields.map((f, i) => [f.key, refData[i] as Row[]])))
     setLoading(false)
   }, [table, orderBy, fixedKey, fields])
 
@@ -99,6 +99,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
       ? await supabase.from(table).update(payload).eq('id', id)
       : await supabase.from(table).insert(payload)
     if (error) { setErr(error.message); return }
+    segarkan(table)
     setForm(null)
     load()
   }
@@ -107,6 +108,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     if (!confirm(t('yakin_hapus'))) return
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) setErr(error.message)
+    segarkan(table)
     load()
   }
 
