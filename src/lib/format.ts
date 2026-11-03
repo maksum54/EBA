@@ -6,4 +6,8 @@ export const rp = (n: number | null | undefined) =>
 export const tgl = (s: string | null | undefined) =>
   s ? new Date(s + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'
 
-export const today = () => new Date().toISOString().slice(0, 10)
+/** Tanggal hari ini menurut jam lokal (WIB), format YYYY-MM-DD. */
+export const today = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
