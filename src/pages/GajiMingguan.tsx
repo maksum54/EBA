@@ -39,6 +39,11 @@ export const jamPerHari = (pulang: string) => {
   if (jam < MULAI_LEMBUR) jam += 24 // lewat tengah malam, mis. 01:00
   return Math.max(0, Math.round((jam - MULAI_LEMBUR) * 2) / 2) // dibulatkan per 30 menit
 }
+// Pilihan jam pulang (bukan jam sekarang): 17:30 s/d 24:00 tiap 30 menit
+const PILIHAN_PULANG = Array.from({ length: 14 }, (_, i) => {
+  const t = 17.5 + i * 0.5
+  return `${String(Math.floor(t)).padStart(2, '0')}:${t % 1 ? '30' : '00'}`
+})
 const keJam = (x: number) => { const t = MULAI_LEMBUR + x; const h = Math.floor(t) % 24; return `${String(h).padStart(2, '0')}:${t % 1 ? '30' : '00'}` }
 
 // Tanggal lokal (WIB) → "YYYY-MM-DD". Jangan pakai toISOString (UTC, bisa mundur sehari).
@@ -230,7 +235,10 @@ export default function GajiMingguan() {
                     <td className="td text-center"><MoneyInput className="input mx-auto w-28 text-right" value={b.tarif} onChange={(v) => set(k.id, 'tarif', v)} /></td>
                     <td className="td text-center">
                       <div className="flex items-center justify-center gap-1">
-                        <input type="time" step={1800} className="input w-28 text-center" value={b.pulang} onChange={(e) => set(k.id, 'pulang', e.target.value)} />
+                        <select className="input w-28 text-center" value={b.pulang} onChange={(e) => set(k.id, 'pulang', e.target.value)}>
+                          <option value="">—</option>
+                          {PILIHAN_PULANG.map((j) => <option key={j} value={j}>{j} ({jamPerHari(j)} j)</option>)}
+                        </select>
                         {b.pulang && <button type="button" className="text-gray-400 hover:text-red-600" title={t('gm_tanpa_lembur')} onClick={() => set(k.id, 'pulang', '')}>✕</button>}
                       </div>
                       {jamPerHari(b.pulang) > 0 && <div className="mt-0.5 text-[11px] text-gray-500">{jamPerHari(b.pulang)} {t('gm_jam_per_hari')}</div>}
