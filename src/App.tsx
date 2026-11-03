@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import ProyekDetail from './pages/ProyekDetail'
 import Laporan from './pages/Laporan'
 import Pembelian from './pages/Pembelian'
+import GajiMingguan from './pages/GajiMingguan'
 import {
   BiayaPage, GajiPage, KaryawanPage, KasbonPage, KlienPage, ManualPage, ProyekPage, RealisasiPage, SupplierPage, TerminPage,
 } from './pages/modules'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="kasbon" element={<KasbonPage />} />
           <Route path="realisasi" element={<RealisasiPage />} />
           <Route path="gaji" element={<GajiPage />} />
+          <Route path="gaji-mingguan" element={<GajiMingguan />} />
           <Route path="biaya" element={<BiayaPage />} />
           <Route path="manual" element={<ManualPage />} />
           <Route path="karyawan" element={<KaryawanPage />} />
