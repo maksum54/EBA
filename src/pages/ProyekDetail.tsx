@@ -5,6 +5,7 @@ import { useT } from '../lib/i18n'
 import { rp, tgl } from '../lib/format'
 import CrudPage from '../components/CrudPage'
 import Kop from '../components/Kop'
+import { cetak, tglFile } from '../lib/cetak'
 import { F_TERMIN, terminCalc } from './modules'
 
 type Laba = { kode_eba: string | null; kode_lpse: string | null; nama: string; nilai_kontrak: number; pendapatan: number; biaya: number; laba: number }
@@ -36,7 +37,7 @@ export default function ProyekDetail() {
       <Kop judul={`${t('laba_proyek')}`} sub={`${p.kode_eba || ''} ${p.kode_lpse ? '· LPSE ' + p.kode_lpse : ''} — ${p.nama}`} />
       <div className="no-print flex items-center justify-between">
         <Link to="/proyek" className="text-sm text-gray-500 hover:underline">{t('kembali')}</Link>
-        <button className="btn-ghost" onClick={() => window.print()}>{t('cetak')}</button>
+        <button className="btn-ghost" onClick={() => cetak(`Laporan Proyek ${p.kode_eba || p.kode_lpse || ''} ${tglFile()}`)}>{t('cetak')}</button>
       </div>
       <div className="no-print">
         <h1 className="text-xl font-bold">{p.kode_eba || p.kode_lpse} — {p.nama}</h1>

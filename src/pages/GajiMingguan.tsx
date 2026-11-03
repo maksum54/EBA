@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
 import Kop from '../components/Kop'
+import { cetak } from '../lib/cetak'
 import { MoneyInput, QtyInput } from '../components/NumInput'
 
 /**
@@ -137,7 +138,7 @@ export default function GajiMingguan() {
       <div className="no-print space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-bold">{t('gaji_mingguan')}</h1>
-          {rekap.length > 0 && <button className="btn-ghost" onClick={() => window.print()}>🖨 {t('cetak')}</button>}
+          {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Mingguan ${mulai} sd ${selesai}`)}>🖨 {t('cetak')}</button>}
         </div>
 
         {/* Pilih minggu: tombol ‹ › */}

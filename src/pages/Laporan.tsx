@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
 import Kop from '../components/Kop'
+import { cetak } from '../lib/cetak'
 
 type BB = { jurnal_id: number; tanggal: string; keterangan: string; sumber: string; akun_kode: string; akun_nama: string; tipe: string; debit: number; kredit: number }
 type Tab = 'laba_rugi' | 'neraca' | 'buku_besar'
@@ -58,7 +59,7 @@ export default function Laporan() {
         <h1 className="mr-auto text-xl font-bold">{t('laporan')}</h1>
         {tab !== 'neraca' && <label className="text-sm">{t('dari')}<input type="date" className="input" value={dari} onChange={(e) => setDari(e.target.value)} /></label>}
         <label className="text-sm">{tab === 'neraca' ? t('per_tanggal') : t('sampai')}<input type="date" className="input" value={sampai} onChange={(e) => setSampai(e.target.value)} /></label>
-        <button className="btn-ghost" onClick={() => window.print()}>{t('cetak')}</button>
+        <button className="btn-ghost" onClick={() => cetak(tab === 'neraca' ? `Neraca per ${sampai}` : `${tab === 'laba_rugi' ? 'Laba Rugi' : 'Buku Besar'} ${dari} sd ${sampai}`)}>{t('cetak')}</button>
       </div>
       <div className="no-print flex gap-2">
         {(['laba_rugi', 'neraca', 'buku_besar'] as Tab[]).map((k) => (
