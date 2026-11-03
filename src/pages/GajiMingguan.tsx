@@ -12,7 +12,7 @@ import Kop from '../components/Kop'
 type Kar = { id: number; nama: string; tarif: number }
 type Pro = { id: number; nama: string; kode_eba: string | null; kode_lpse: string | null }
 type Baris = { hari: number | string; tarif: number | string; lembur: number | string; proyek_id: number | null }
-type Tersimpan = { karyawan_id: number; nominal: number; hari: number | null; tarif: number | null; lembur: number | null; proyek_id: number | null; tanggal: string }
+type Tersimpan = { id?: number; karyawan_id: number; nominal: number; hari: number | null; tarif: number | null; lembur: number | null; proyek_id: number | null; tanggal: string }
 
 // Tanggal lokal (WIB) → "YYYY-MM-DD". Jangan pakai toISOString (UTC, bisa mundur sehari).
 const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
@@ -51,11 +51,19 @@ export default function GajiMingguan() {
 
   // Tiap ganti minggu: kosongkan form & ambil yang sudah tersimpan
   useEffect(() => {
-    const b: Record<number, Baris> = {}
-    for (const k of kar) b[k.id] = { hari: '', tarif: k.tarif, lembur: '', proyek_id: proyekUmum }
-    setBaris(b); setMsg(''); setErr('')
-    supabase.from('penggajian').select('karyawan_id,nominal,hari,tarif,lembur,proyek_id,tanggal').eq('periode', periode)
-      .then(({ data }) => setSudah(Object.fromEntries(((data as Tersimpan[]) || []).map((r) => [r.karyawan_id, r]))))
+    setMsg(''); setErr('')
+    supabase.from('penggajian').select('id,karyawan_id,nominal,hari,tarif,lembur,proyek_id,tanggal').eq('periode', periode)
+      .then(({ data }) => {
+        const sv: Record<number, Tersimpan> = Object.fromEntries(((data as Tersimpan[]) || []).map((r) => [r.karyawan_id, r]))
+        const b: Record<number, Baris> = {}
+        for (const k of kar) {
+          const x = sv[k.id]
+          b[k.id] = x
+            ? { hari: x.hari ?? '', tarif: x.tarif ?? k.tarif, lembur: x.lembur || '', proyek_id: x.proyek_id }
+            : { hari: '', tarif: k.tarif, lembur: '', proyek_id: proyekUmum }
+        }
+        setSudah(sv); setBaris(b)
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kar, periode])
 
@@ -65,27 +73,52 @@ export default function GajiMingguan() {
 
   const baru = useMemo(() => kar.filter((k) => !sudah[k.id] && nominal(baris[k.id]) > 0), [kar, baris, sudah])
   const totalBaru = baru.reduce((a, k) => a + nominal(baris[k.id]), 0)
+  // Baris tersimpan yang angkanya diubah
+  const beda = (k: Kar) => {
+    const s = sudah[k.id], b = baris[k.id]
+    if (!s || !b) return false
+    return Number(b.hari || 0) !== Number(s.hari || 0) || Number(b.tarif || 0) !== Number(s.tarif || 0)
+      || Number(b.lembur || 0) !== Number(s.lembur || 0) || (b.proyek_id ?? null) !== (s.proyek_id ?? null)
+  }
+  const berubah = kar.filter(beda)
+  const hapusGaji = async (k: Kar) => {
+    const s = sudah[k.id]
+    if (!s?.id || !confirm(t('yakin_hapus'))) return
+    const { error } = await supabase.from('penggajian').delete().eq('id', s.id)
+    if (error) { setErr(error.message); return }
+    setSudah((x) => { const y = { ...x }; delete y[k.id]; return y })
+    setBaris((x) => ({ ...x, [k.id]: { hari: '', tarif: k.tarif, lembur: '', proyek_id: proyekUmum } }))
+  }
 
   const simpan = async () => {
-    if (!baru.length) return
+    if (!baru.length && !berubah.length) return
     setBusy(true); setErr(''); setMsg('')
+    // 1) perbarui baris yang diubah
+    for (const k of berubah) {
+      const b = baris[k.id], s = sudah[k.id]
+      const upd = { hari: Number(b.hari || 0), tarif: Number(b.tarif || 0), lembur: Number(b.lembur || 0), proyek_id: b.proyek_id, nominal: nominal(b) }
+      const { error } = await supabase.from('penggajian').update(upd).eq('id', s.id!)
+      if (error) { setErr(error.message); setBusy(false); return }
+      setSudah((x) => ({ ...x, [k.id]: { ...s, ...upd } }))
+    }
+    if (!baru.length) { setBusy(false); setMsg(`${berubah.length} ${t('gm_diperbarui')}`); return }
     const rows = baru.map((k) => {
       const b = baris[k.id]
       return { tanggal: tglBayar, periode, karyawan_id: k.id, proyek_id: b.proyek_id, nominal: nominal(b),
         hari: Number(b.hari || 0), tarif: Number(b.tarif || 0), lembur: Number(b.lembur || 0) }
     })
-    const { error } = await supabase.from('penggajian').insert(rows)
+    const { data: ins, error } = await supabase.from('penggajian').insert(rows).select('id,karyawan_id')
     setBusy(false)
     if (error) { setErr(error.message); return }
     setMsg(`${rows.length} ${t('gm_tersimpan')} · ${rp(totalBaru)}`)
-    setSudah((s) => ({ ...s, ...Object.fromEntries(rows.map((r) => [r.karyawan_id, r])) }))
+    const ids = Object.fromEntries(((ins as { id: number; karyawan_id: number }[]) || []).map((r) => [r.karyawan_id, r.id]))
+    setSudah((s) => ({ ...s, ...Object.fromEntries(rows.map((r) => [r.karyawan_id, { ...r, id: ids[r.karyawan_id] }])) }))
   }
 
   // Data rekap (untuk tampilan & cetak): yang sudah tersimpan
   const rekap = kar.filter((k) => sudah[k.id]).map((k) => ({ ...sudah[k.id], nama: k.nama }))
   const totalRekap = rekap.reduce((a, r) => a + Number(r.nominal), 0)
   const hariRekap = rekap.reduce((a, r) => a + Number(r.hari || 0), 0)
-  const kodePro = (id: number | null) => { const p = pro.find((x) => x.id === id); return p ? p.kode_eba || p.kode_lpse : t('kantor_singkat') }
   const proyekRekap = [...new Set(rekap.map((r) => r.proyek_id))].map((id) => {
     const p = pro.find((x) => x.id === id); return p ? `${p.kode_eba || p.kode_lpse} · ${p.nama}` : t('kantor_singkat')
   }).join('; ')
@@ -142,20 +175,13 @@ export default function GajiMingguan() {
                 const s = sudah[k.id]
                 const b = baris[k.id]
                 if (!b) return null
-                return s ? (
-                  <tr key={k.id} className="text-gray-500 dark:text-gray-400">
-                    <td className="td">{i + 1}</td>
-                    <td className="td font-medium text-gray-800 dark:text-gray-200">{k.nama} <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800 dark:bg-green-900/40 dark:text-green-300">✓ {t('gm_dibayar')}</span></td>
-                    <td className="td text-center tabular-nums">{s.hari ?? '-'}</td>
-                    <td className="td text-right tabular-nums">{s.tarif ? rp(s.tarif) : '-'}</td>
-                    <td className="td text-right tabular-nums">{s.lembur ? rp(s.lembur) : '-'}</td>
-                    <td className="td">{kodePro(s.proyek_id)}</td>
-                    <td className="td text-right font-semibold tabular-nums text-gray-800 dark:text-gray-200">{rp(s.nominal)}</td>
-                  </tr>
-                ) : (
+                return (
                   <tr key={k.id}>
                     <td className="td text-gray-500">{i + 1}</td>
-                    <td className="td font-medium">{k.nama}</td>
+                    <td className="td font-medium">{k.nama}
+                      {s && !beda(k) && <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-xs text-green-800 dark:bg-green-900/40 dark:text-green-300">✓ {t('gm_dibayar')}</span>}
+                      {beda(k) && <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">✎ {t('gm_diubah')}</span>}
+                    </td>
                     <td className="td text-center"><input type="number" min={0} max={7} step={0.5} placeholder="0" className="input mx-auto w-16 text-center" value={b.hari} onChange={(e) => set(k.id, 'hari', e.target.value)} /></td>
                     <td className="td"><input type="number" className="input ml-auto w-28 text-right" value={b.tarif} onChange={(e) => set(k.id, 'tarif', e.target.value)} /></td>
                     <td className="td"><input type="number" placeholder="0" className="input ml-auto w-28 text-right" value={b.lembur} onChange={(e) => set(k.id, 'lembur', e.target.value)} /></td>
@@ -165,7 +191,9 @@ export default function GajiMingguan() {
                         {pro.map((p) => <option key={p.id} value={p.id}>{p.kode_eba || p.kode_lpse}</option>)}
                       </select>
                     </td>
-                    <td className="td text-right font-semibold tabular-nums">{nominal(b) ? rp(nominal(b)) : '-'}</td>
+                    <td className="td whitespace-nowrap text-right font-semibold tabular-nums">{nominal(b) ? rp(nominal(b)) : '-'}
+                      {s && <button className="ml-2 text-gray-400 hover:text-red-600" title={t('hapus')} onClick={() => hapusGaji(k)}>✕</button>}
+                    </td>
                   </tr>
                 )
               })}
@@ -177,9 +205,10 @@ export default function GajiMingguan() {
         <div className="card flex flex-wrap items-center justify-between gap-3">
           <div className="flex gap-6 text-sm">
             <div><div className="text-xs text-gray-500">{t('gm_dibayar')}</div><div className="font-semibold tabular-nums">{rekap.length} {t('gm_orang')} · {rp(totalRekap)}</div></div>
+            {berubah.length > 0 && <div><div className="text-xs text-gray-500">{t('gm_diubah')}</div><div className="font-semibold tabular-nums text-amber-600">{berubah.length} {t('gm_orang')}</div></div>}
             {baru.length > 0 && <div><div className="text-xs text-gray-500">{t('gm_akan_disimpan')}</div><div className="font-semibold tabular-nums text-eba-600">{baru.length} {t('gm_orang')} · {rp(totalBaru)}</div></div>}
           </div>
-          <button className="btn-primary px-5 py-2" disabled={busy || !baru.length} onClick={simpan}>{t('simpan')}</button>
+          <button className="btn-primary px-5 py-2" disabled={busy || (!baru.length && !berubah.length)} onClick={simpan}>{t('simpan')}</button>
         </div>
       </div>
 

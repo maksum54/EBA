@@ -124,6 +124,8 @@ const dict: Record<string, [string, string]> = {
   gm_sudah: ['Sudah digaji minggu ini', 'Already paid this week'],
   gm_tersimpan: ['gaji tersimpan', 'payments saved'],
   gm_dibayar: ['Sudah dibayar', 'Paid'],
+  gm_diubah: ['Diubah', 'Edited'],
+  gm_diperbarui: ['gaji diperbarui', 'payments updated'],
   gm_akan_disimpan: ['Akan disimpan', 'To be saved'],
   gm_ttd: ['Tanda Tangan', 'Signature'],
   gm_dibuat: ['Dibuat oleh,', 'Prepared by,'],
