@@ -14,7 +14,7 @@ export const F_KLIEN: Field[] = [
 export const F_SUPPLIER: Field[] = [{ key: 'nama', type: 'text', required: true }, { key: 'kontak', type: 'text' }]
 export const F_KARYAWAN: Field[] = [
   { key: 'nama', type: 'text', required: true }, { key: 'jabatan', type: 'text' },
-  { key: 'tipe_gaji', type: 'select', options: TIPE_GAJI }, { key: 'tarif', type: 'money' }, { key: 'aktif', type: 'bool' },
+  { key: 'tipe_gaji', type: 'select', options: TIPE_GAJI }, { key: 'tarif', type: 'money' }, { key: 'tarif_lembur', type: 'money' }, { key: 'aktif', type: 'bool' },
 ]
 export const F_PROYEK: Field[] = [
   { key: 'kode_eba', type: 'text' }, { key: 'kode_lpse', type: 'text' }, { key: 'nama', type: 'text', required: true },
