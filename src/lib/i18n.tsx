@@ -1,0 +1,109 @@
+import { createContext, useContext, useState, type ReactNode } from 'react'
+
+type Lang = 'id' | 'en'
+
+// Semua teks UI [Indonesia, English]. Tambah kunci baru di kedua bahasa.
+const dict: Record<string, [string, string]> = {
+  dashboard: ['Dashboard', 'Dashboard'],
+  proyek: ['Proyek', 'Projects'],
+  termin: ['Termin', 'Billing Terms'],
+  pembelian: ['Pembelian Material', 'Material Purchases'],
+  kasbon: ['Kasbon Lapangan', 'Field Cash Advances'],
+  realisasi: ['Realisasi Kasbon', 'Advance Settlements'],
+  penggajian: ['Penggajian', 'Payroll'],
+  biaya_lain: ['Biaya Lain', 'Other Expenses'],
+  karyawan: ['Karyawan', 'Employees'],
+  supplier: ['Supplier', 'Suppliers'],
+  klien: ['Klien', 'Clients'],
+  jurnal_manual: ['Jurnal Manual', 'Manual Journal'],
+  laporan: ['Laporan', 'Reports'],
+  master: ['Data Master', 'Master Data'],
+  transaksi: ['Transaksi', 'Transactions'],
+  login: ['Masuk', 'Sign in'],
+  logout: ['Keluar', 'Sign out'],
+  email: ['Email', 'Email'],
+  password: ['Kata sandi', 'Password'],
+  tambah: ['Tambah', 'Add'],
+  simpan: ['Simpan', 'Save'],
+  batal: ['Batal', 'Cancel'],
+  ubah: ['Ubah', 'Edit'],
+  hapus: ['Hapus', 'Delete'],
+  detail: ['Detail', 'Details'],
+  yakin_hapus: ['Yakin hapus data ini? Jurnalnya ikut terhapus.', 'Delete this record? Its journal is deleted too.'],
+  kosong: ['Belum ada data.', 'No data yet.'],
+  memuat: ['Memuat…', 'Loading…'],
+  cetak: ['Cetak / PDF', 'Print / PDF'],
+  saldo_bank: ['Saldo Bank Mandiri (sistem)', 'Bank Mandiri Balance (system)'],
+  piutang_termin: ['Termin Belum Diterima', 'Unpaid Billing Terms'],
+  utang_supplier: ['Utang Supplier', 'Supplier Payables'],
+  kasbon_terbuka: ['Kasbon Belum Selesai', 'Open Cash Advances'],
+  laba_proyek: ['Untung-Rugi per Proyek', 'Profit & Loss per Project'],
+  laba_rugi: ['Laba Rugi', 'Income Statement'],
+  neraca: ['Neraca', 'Balance Sheet'],
+  buku_besar: ['Buku Besar', 'General Ledger'],
+  dari: ['Dari', 'From'],
+  sampai: ['Sampai', 'To'],
+  per_tanggal: ['Per tanggal', 'As of'],
+  pendapatan: ['Pendapatan', 'Revenue'],
+  biaya: ['Biaya', 'Costs'],
+  beban: ['Beban', 'Expenses'],
+  laba: ['Laba / Rugi', 'Profit / Loss'],
+  margin: ['Margin', 'Margin'],
+  nilai_kontrak: ['Nilai Kontrak', 'Contract Value'],
+  total: ['Total', 'Total'],
+  aset: ['Aset', 'Assets'],
+  kewajiban: ['Kewajiban', 'Liabilities'],
+  ekuitas: ['Ekuitas', 'Equity'],
+  laba_berjalan: ['Laba Periode Berjalan', 'Current Period Profit'],
+  seimbang: ['Seimbang', 'Balanced'],
+  tidak_seimbang: ['TIDAK seimbang', 'NOT balanced'],
+  debit: ['Debit', 'Debit'],
+  kredit: ['Kredit', 'Credit'],
+  akun: ['Akun', 'Account'],
+  saldo: ['Saldo', 'Balance'],
+  kembali: ['← Kembali', '← Back'],
+  setup_title: ['Supabase belum disambungkan', 'Supabase not connected'],
+  setup_body: [
+    'Salin .env.example menjadi .env.local, isi URL & anon key dari Supabase, lalu jalankan ulang npm run dev.',
+    'Copy .env.example to .env.local, fill in the Supabase URL & anon key, then restart npm run dev.',
+  ],
+  // kolom
+  nama: ['Nama', 'Name'], tanggal: ['Tanggal', 'Date'], uraian: ['Uraian', 'Description'],
+  jumlah: ['Jumlah (Rp)', 'Amount (Rp)'], nominal: ['Nominal (Rp)', 'Amount (Rp)'], status: ['Status', 'Status'],
+  kode_eba: ['Kode EBA', 'EBA Code'], kode_lpse: ['Kode LPSE', 'LPSE Code'], tgl_mulai: ['Mulai', 'Start'],
+  tgl_selesai: ['Selesai', 'Finish'], catatan: ['Catatan', 'Notes'], alamat: ['Alamat', 'Address'],
+  npwp: ['NPWP', 'Tax ID'], kontak: ['Kontak', 'Contact'], jabatan: ['Jabatan', 'Position'],
+  tipe_gaji: ['Tipe Gaji', 'Pay Type'], tarif: ['Tarif (Rp)', 'Rate (Rp)'], aktif: ['Aktif', 'Active'],
+  nilai_dpp: ['Nilai DPP (Rp)', 'Base Value (Rp)'], ppn: ['PPN 11% (Rp)', 'VAT 11% (Rp)'],
+  pph: ['PPh Dipotong (Rp)', 'Income Tax Withheld (Rp)'], nilai_bersih: ['Diterima Bersih', 'Net Received'],
+  tgl_tagih: ['Tgl Tagih', 'Billed'], tgl_terima: ['Tgl Terima', 'Received'],
+  no_bukti_potong: ['No. Bukti Potong (opsional)', 'Withholding Slip No. (optional)'], status_bayar: ['Pembayaran', 'Payment'],
+  tgl_lunas: ['Tgl Lunas', 'Paid On'], nota_url: ['Link Foto Nota', 'Receipt Photo Link'],
+  keperluan: ['Keperluan', 'Purpose'], sisa_kembali: ['Sisa Dikembalikan (Rp)', 'Returned (Rp)'],
+  periode: ['Periode', 'Period'], kategori: ['Kategori', 'Category'], keterangan: ['Keterangan', 'Description'],
+  akun_debit: ['Akun Debit', 'Debit Account'], akun_kredit: ['Akun Kredit', 'Credit Account'],
+  proyek_id: ['Proyek', 'Project'], klien_id: ['Klien', 'Client'], supplier_id: ['Supplier', 'Supplier'],
+  karyawan_id: ['Karyawan', 'Employee'], kasbon_id: ['Kasbon', 'Cash Advance'],
+  kantor: ['— Kantor (bukan proyek) —', '— Office (no project) —'],
+  pilih: ['— Pilih —', '— Select —'],
+  hint_termin: ['PPN 11% dihitung otomatis dari DPP. PPh & PPN dipotong klien; yang masuk Mandiri = DPP − PPh.', 'VAT 11% is auto-calculated. Taxes are withheld by the client; Mandiri receives Base − Income Tax.'],
+  hint_proyek: ['Kode EBA dibuat otomatis saat status Berjalan. Nilai kontrak termasuk PPN.', 'EBA code is generated when status becomes Running. Contract value includes VAT.'],
+  hint_kasbon: ['Uang kasbon dicatat sebagai Uang Muka sampai notanya direalisasi.', 'Advances stay as prepayments until receipts are settled.'],
+  hint_manual: ['Untuk saldo awal, setoran modal, atau koreksi. Contoh saldo awal: Debit 1100 Bank, Kredit 3200 Saldo Awal.', 'For opening balances, capital or corrections. E.g. Debit 1100 Bank, Credit 3200 Opening Balance.'],
+}
+
+const Ctx = createContext<{ lang: Lang; setLang: (l: Lang) => void; t: (k: string) => string }>({
+  lang: 'id', setLang: () => {}, t: (k) => k,
+})
+
+export function I18nProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(() => {
+    try { return (localStorage.getItem('eba-lang') as Lang) || 'id' } catch { return 'id' }
+  })
+  const setLang = (l: Lang) => { setLangState(l); try { localStorage.setItem('eba-lang', l) } catch { /* abaikan */ } }
+  const t = (k: string) => dict[k]?.[lang === 'id' ? 0 : 1] ?? k
+  return <Ctx.Provider value={{ lang, setLang, t }}>{children}</Ctx.Provider>
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useT = () => useContext(Ctx)

@@ -1,0 +1,9 @@
+{
+  "name": "EBA Finance — PT EBA Karya Mandiri",
+  "short_name": "EBA Finance",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#c0302b",
+  "icons": [{ "src": "/logo-eba.png", "sizes": "232x182", "type": "image/png" }]
+}
