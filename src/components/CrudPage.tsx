@@ -183,7 +183,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
 
       <div className="card overflow-x-auto p-0">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead><tr>{cols.map((f) => <th key={f.key} className="th">{t(f.key)}</th>)}<th className="th" /></tr></thead>
+          <thead><tr>{cols.map((f) => <th key={f.key} className={'th ' + (f.type === 'money' ? 'text-right' : f.type === 'bool' ? 'text-center' : '')}>{t(f.key)}</th>)}<th className="th" /></tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <tr><td className="td text-gray-500" colSpan={cols.length + 1}>{t('memuat')}</td></tr>
@@ -192,7 +192,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
             ) : rows.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 {cols.map((f) => (
-                  <td key={f.key} className={'td ' + (f.type === 'money' ? 'whitespace-nowrap text-right tabular-nums' : '')}>{show(f, r)}</td>
+                  <td key={f.key} className={'td ' + (f.type === 'money' ? 'whitespace-nowrap text-right tabular-nums' : f.type === 'bool' ? 'text-center' : '')}>{show(f, r)}</td>
                 ))}
                 <td className="td whitespace-nowrap text-right">
                   {rowAction?.(r)}

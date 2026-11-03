@@ -13,8 +13,22 @@ import { MoneyInput, QtyInput } from '../components/NumInput'
  */
 type Kar = { id: number; nama: string; tarif: number; tarif_lembur: number }
 type Pro = { id: number; nama: string; kode_eba: string | null; kode_lpse: string | null }
-type Baris = { hari: number | string; tarif: number | string; jam: number | string; tl: number | string; proyek_id: number | null }
-type Tersimpan = { id?: number; karyawan_id: number; nominal: number; hari: number | null; tarif: number | null; lembur: number | null; jam_lembur?: number | null; tarif_lembur?: number | null; proyek_id: number | null; tanggal: string }
+type Baris = { hari: number | string; tarif: number | string; jam: number | string; hl: number | string; tl: number | string; proyek_id: number | null }
+type Tersimpan = { id?: number; karyawan_id: number; nominal: number; hari: number | null; tarif: number | null; lembur: number | null; jam_lembur?: number | null; hari_lembur?: number | null; tarif_lembur?: number | null; proyek_id: number | null; tanggal: string }
+
+/**
+ * Lembur resmi (PP 35/2021), hari kerja biasa, lembur mulai pukul 17.00.
+ * tl = upah sejam (1/173 × upah sebulan; harian: upah sehari × 25 / 173).
+ * Tiap hari lembur: jam ke-1 = 1,5 × upah sejam, jam ke-2 dst = 2 × upah sejam.
+ * Jika "hari lembur" kosong, jam dianggap tersebar di hari kerja (maks. 1 jam pertama per hari).
+ */
+export function hitungLembur(jam: number, hariLembur: number, hariKerja: number, tl: number) {
+  if (!(jam > 0) || !(tl > 0)) return { hariPakai: 0, jam1: 0, jam2: 0, rp: 0 }
+  const hariPakai = Math.min(jam, hariLembur > 0 ? hariLembur : Math.max(1, hariKerja || 1))
+  const jam1 = hariPakai            // jam pertama tiap hari lembur
+  const jam2 = Math.max(0, jam - jam1)
+  return { hariPakai, jam1, jam2, rp: Math.round(tl * (1.5 * jam1 + 2 * jam2)) }
+}
 
 // Tanggal lokal (WIB) → "YYYY-MM-DD". Jangan pakai toISOString (UTC, bisa mundur sehari).
 const iso = (x: Date) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`
@@ -35,9 +49,10 @@ export default function GajiMingguan() {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const kosong = (k: Kar): Baris => ({ hari: '', tarif: k.tarif, jam: '', tl: k.tarif_lembur || 0, proyek_id: proyekUmum })
+  const kosong = (k: Kar): Baris => ({ hari: '', tarif: k.tarif, jam: '', hl: '', tl: k.tarif_lembur || 0, proyek_id: proyekUmum })
+  const lemburDari = (b: Baris) => hitungLembur(Number(b.jam || 0), Number(b.hl || 0), Number(b.hari || 0), Number(b.tl || 0))
   const rinci = (b: Baris) => ({ hari: Number(b.hari || 0), tarif: Number(b.tarif || 0), jam_lembur: Number(b.jam || 0),
-    tarif_lembur: Number(b.tl || 0), lembur: Number(b.jam || 0) * Number(b.tl || 0) })
+    hari_lembur: Number(b.hl || 0), tarif_lembur: Number(b.tl || 0), lembur: lemburDari(b).rp })
 
   const selesai = geser(mulai, 6)
   const periode = `Minggu ${tgl(mulai)} – ${tgl(selesai)}`
@@ -58,14 +73,14 @@ export default function GajiMingguan() {
   // Tiap ganti minggu: kosongkan form & ambil yang sudah tersimpan
   useEffect(() => {
     setMsg(''); setErr('')
-    supabase.from('penggajian').select('id,karyawan_id,nominal,hari,tarif,lembur,jam_lembur,tarif_lembur,proyek_id,tanggal').eq('periode', periode)
+    supabase.from('penggajian').select('id,karyawan_id,nominal,hari,tarif,lembur,jam_lembur,hari_lembur,tarif_lembur,proyek_id,tanggal').eq('periode', periode)
       .then(({ data }) => {
         const sv: Record<number, Tersimpan> = Object.fromEntries(((data as Tersimpan[]) || []).map((r) => [r.karyawan_id, r]))
         const b: Record<number, Baris> = {}
         for (const k of kar) {
           const x = sv[k.id]
           b[k.id] = x
-            ? { hari: x.hari ?? '', tarif: x.tarif ?? k.tarif, jam: x.jam_lembur || '', tl: x.tarif_lembur || k.tarif_lembur || 0, proyek_id: x.proyek_id }
+            ? { hari: x.hari ?? '', tarif: x.tarif ?? k.tarif, jam: x.jam_lembur || '', hl: x.hari_lembur || '', tl: x.tarif_lembur || k.tarif_lembur || 0, proyek_id: x.proyek_id }
             : kosong(k)
         }
         setSudah(sv); setBaris(b)
@@ -73,8 +88,8 @@ export default function GajiMingguan() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kar, periode])
 
-  // Upah = hari × tarif harian + jam lembur × tarif lembur per jam
-  const uangLembur = (b?: Baris) => (b ? Number(b.jam || 0) * Number(b.tl || 0) : 0)
+  // Upah = hari × tarif harian + lembur resmi (1,5× jam pertama, 2× jam berikutnya)
+  const uangLembur = (b?: Baris) => (b ? lemburDari(b).rp : 0)
   const nominal = (b?: Baris) => (b ? Number(b.hari || 0) * Number(b.tarif || 0) + uangLembur(b) : 0)
   const set = (id: number, k: keyof Baris, v: string | number | null) => setBaris((x) => ({ ...x, [id]: { ...x[id], [k]: v } }))
   const semua = (patch: Partial<Baris>) => setBaris((x) => Object.fromEntries(Object.entries(x).map(([k, v]) => [k, { ...v, ...patch }])))
@@ -86,7 +101,7 @@ export default function GajiMingguan() {
     const s = sudah[k.id], b = baris[k.id]
     if (!s || !b) return false
     return Number(b.hari || 0) !== Number(s.hari || 0) || Number(b.tarif || 0) !== Number(s.tarif || 0)
-      || Number(b.jam || 0) !== Number(s.jam_lembur || 0) || Number(b.tl || 0) !== Number(s.tarif_lembur || 0) && Number(b.jam || 0) > 0
+      || Number(b.jam || 0) !== Number(s.jam_lembur || 0) || Number(b.hl || 0) !== Number(s.hari_lembur || 0) || Number(b.tl || 0) !== Number(s.tarif_lembur || 0) && Number(b.jam || 0) > 0
       || (b.proyek_id ?? null) !== (s.proyek_id ?? null)
   }
   const berubah = kar.filter(beda)
@@ -171,16 +186,17 @@ export default function GajiMingguan() {
             {[5, 6, 7].map((h) => <button key={h} className="btn-ghost py-1" onClick={() => semua({ hari: h })}>{h} {t('gm_hari')}</button>)}
             <button className="btn-ghost py-1" onClick={() => semua({ hari: '' })}>{t('gm_kosongkan')}</button>
           </div>
+          <div className="border-b border-gray-200 bg-amber-50/60 px-4 py-1.5 text-xs text-amber-900 dark:border-gray-700 dark:bg-amber-950/30 dark:text-amber-200">ⓘ {t('gm_info_lembur')}</div>
           <table className="min-w-full">
             <thead className="bg-gray-50 dark:bg-gray-800/60"><tr>
               <th className="th w-8">#</th><th className="th">{t('nama')}</th>
               <th className="th text-center">{t('gm_hari_kerja')}</th><th className="th text-center">{t('gm_tarif_hari')}</th>
-              <th className="th text-center">{t('gm_jam_lembur')}</th><th className="th text-center">{t('gm_tarif_lembur')}</th>
+              <th className="th text-center">{t('gm_jam_lembur')}</th><th className="th text-center">{t('gm_hari_lembur')}</th><th className="th text-center">{t('gm_tarif_lembur')}</th>
               <th className="th">{t('proyek_id')}</th>
               <th className="th text-right">{t('total')}</th>
             </tr></thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {kar.length === 0 && <tr><td className="td text-gray-500" colSpan={8}>{t('gm_tidak_ada')}</td></tr>}
+              {kar.length === 0 && <tr><td className="td text-gray-500" colSpan={9}>{t('gm_tidak_ada')}</td></tr>}
               {kar.map((k, i) => {
                 const s = sudah[k.id]
                 const b = baris[k.id]
@@ -195,8 +211,12 @@ export default function GajiMingguan() {
                     <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" value={b.hari} onChange={(v) => set(k.id, 'hari', v)} /></td>
                     <td className="td text-center"><MoneyInput className="input mx-auto w-28 text-right" value={b.tarif} onChange={(v) => set(k.id, 'tarif', v)} /></td>
                     <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" value={b.jam} onChange={(v) => set(k.id, 'jam', v)} /></td>
+                    <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" placeholder={String(lemburDari(b).hariPakai || 0)} value={b.hl} onChange={(v) => set(k.id, 'hl', v)} /></td>
                     <td className="td text-center"><MoneyInput className="input mx-auto w-24 text-right" value={b.tl} onChange={(v) => set(k.id, 'tl', v)} />
-                      {uangLembur(b) > 0 && <div className="mt-0.5 text-xs text-gray-500 tabular-nums">= {rp(uangLembur(b))}</div>}
+                      {uangLembur(b) > 0 && (() => { const l = lemburDari(b); return (
+                        <div className="mt-0.5 whitespace-nowrap text-[11px] leading-tight text-gray-500 tabular-nums">
+                          {l.jam1}×1,5{l.jam2 > 0 && ` + ${l.jam2}×2`} = {rp(l.rp)}
+                        </div>) })()}
                     </td>
                     <td className="td">
                       <select className="input w-36" value={b.proyek_id ?? ''} onChange={(e) => set(k.id, 'proyek_id', e.target.value ? Number(e.target.value) : null)}>
