@@ -18,3 +18,6 @@
   .print-only { display: block !important; }
 }
 .print-only { display: none; }
+
+/* hormati pengaturan 'kurangi animasi' di HP/PC */
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
