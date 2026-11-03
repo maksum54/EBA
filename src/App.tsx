@@ -36,7 +36,11 @@ export default function App() {
       </div>
     )
   }
-  if (!ready) return null
+  if (!ready) return (
+    <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <img src="/icons/icon-192.png" alt="EBA" className="h-16 w-16 animate-pulse rounded-2xl" />
+    </div>
+  )
   if (!session) return <Login />
 
   return (
