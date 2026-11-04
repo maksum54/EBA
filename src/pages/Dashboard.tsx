@@ -14,6 +14,9 @@ export default function Dashboard() {
   const [laba, setLaba] = useState<Laba[]>([])
   const [saldo, setSaldo] = useState({ bank: 0, utang: 0, kasbon: 0, piutang: 0 })
   const [telat, setTelat] = useState(0)
+  // Filter status proyek (disimpan supaya tetap saat halaman dibuka lagi)
+  const [fs, setFs] = useState<string>(() => { try { return localStorage.getItem('eba-filter-proyek') || '' } catch { return '' } })
+  const pilihFs = (v: string) => { setFs(v); try { localStorage.setItem('eba-filter-proyek', v) } catch { /* abaikan */ } }
 
   // Utang supplier yang sudah lewat jatuh tempo (merah di dashboard)
   useEffect(() => {
@@ -45,6 +48,8 @@ export default function Dashboard() {
     ['kasbon_terbuka', saldo.kasbon, saldo.kasbon > 0 ? 'text-eba-600' : 'text-gray-900 dark:text-gray-100'],
   ]
 
+  const tampil = fs ? laba.filter((p) => p.status === fs) : laba
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-bold">{t('dashboard')}</h1>
@@ -63,7 +68,22 @@ export default function Dashboard() {
       )}
 
       <div className="card overflow-x-auto p-0">
-        <div className="border-b border-gray-200 px-4 py-3 font-semibold dark:border-gray-700">{t('laba_proyek')}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+          <span className="font-semibold">{t('laba_proyek')}</span>
+          <div className="flex flex-wrap gap-1 text-sm">
+            {[{ v: '', id: 'Semua', en: 'All' }, ...STATUS_PROYEK].map((o) => {
+              const n = o.v ? laba.filter((p) => p.status === o.v).length : laba.length
+              return (
+                <button key={o.v} onClick={() => pilihFs(o.v)}
+                  className={`rounded-full border px-3 py-1 transition ${fs === o.v
+                    ? 'border-eba-600 bg-eba-600 text-white'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
+                  {o[lang]} <span className="opacity-70">{n}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
         <table className="min-w-full">
           <thead><tr>
             <th className="th">{t('proyek')}</th><th className="th">{t('status')}</th>
@@ -71,8 +91,8 @@ export default function Dashboard() {
             <th className="th text-right">{t('biaya')}</th><th className="th text-right">{t('laba')}</th><th className="th text-right">{t('margin')}</th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {laba.length === 0 && <tr><td className="td text-gray-500" colSpan={7}>{t('kosong')}</td></tr>}
-            {laba.map((p) => (
+            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={7}>{t('kosong')}</td></tr>}
+            {tampil.map((p) => (
               <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 <td className="td">
                   <Link to={`/proyek/${p.id}`} className="font-medium text-eba-600 hover:underline">{p.kode_eba || p.kode_lpse}</Link>
@@ -87,17 +107,17 @@ export default function Dashboard() {
               </tr>
             ))}
           </tbody>
-          {laba.length > 0 && (() => {
+          {tampil.length > 0 && (() => {
             // Total semua proyek (proyek Tender & Batal tidak dihitung di nilai kontrak)
-            const aktif = laba.filter((p) => p.status !== 'tender' && p.status !== 'batal')
+            const aktif = fs ? tampil : tampil.filter((p) => p.status !== 'tender' && p.status !== 'batal')
             const kontrak = aktif.reduce((a, p) => a + Number(p.nilai_kontrak), 0)
-            const pend = laba.reduce((a, p) => a + Number(p.pendapatan), 0)
-            const biaya = laba.reduce((a, p) => a + Number(p.biaya), 0)
+            const pend = tampil.reduce((a, p) => a + Number(p.pendapatan), 0)
+            const biaya = tampil.reduce((a, p) => a + Number(p.biaya), 0)
             const lr = pend - biaya
             return (
               <tfoot>
                 <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
-                  <td className="td">{t('total')} <span className="text-xs font-normal text-gray-500">({aktif.length} {t('proyek').toLowerCase()} · {t('tanpa_tender')})</span></td>
+                  <td className="td">{t('total')} <span className="text-xs font-normal text-gray-500">({aktif.length} {t('proyek').toLowerCase()}{fs ? '' : ' · ' + t('tanpa_tender')})</span></td>
                   <td className="td" />
                   <td className="td text-right tabular-nums">{rp(kontrak)}</td>
                   <td className="td text-right tabular-nums">{rp(pend)}</td>
