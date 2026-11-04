@@ -7,24 +7,35 @@ import CrudPage from '../components/CrudPage'
 import Kop from '../components/Kop'
 import { cetak, tglFile } from '../lib/cetak'
 import { F_TERMIN, terminCalc } from './modules'
+import { MoneyInput } from '../components/NumInput'
 
 type Laba = { kode_eba: string | null; kode_lpse: string | null; nama: string; nilai_kontrak: number; pendapatan: number; biaya: number; laba: number }
 type BB = { jurnal_id: number; tanggal: string; keterangan: string; akun_kode: string; akun_nama: string; tipe: string; debit: number; kredit: number }
+
+// Kategori biaya proyek yang bisa diberi anggaran
+const AKUN_RAB: [string, string, string][] = [
+  ['5100', 'Material', 'Materials'], ['5200', 'Upah Tukang', 'Labour'],
+  ['5300', 'Lapangan (Kasbon)', 'Site (Advances)'], ['5400', 'Lainnya', 'Other'],
+]
 
 // Detail satu proyek: ringkasan untung-rugi, termin, dan rincian biaya.
 export default function ProyekDetail() {
   const { id } = useParams()
   const pid = Number(id)
-  const { t } = useT()
+  const { t, lang } = useT()
+  const [rab, setRab] = useState<Record<string, number>>({})
+  const [rabMsg, setRabMsg] = useState('')
   const [p, setP] = useState<Laba | null>(null)
   const [rows, setRows] = useState<BB[]>([])
 
   useEffect(() => {
     (async () => {
-      const [a, b] = await Promise.all([
+      const [a, b, c] = await Promise.all([
         supabase.from('v_proyek_laba').select('*').eq('id', pid).single(),
         supabase.from('v_buku_besar').select('*').eq('proyek_id', pid).in('tipe', ['pendapatan', 'beban']).order('tanggal'),
+        supabase.from('rab_proyek').select('akun_kode,nilai').eq('proyek_id', pid),
       ])
+      setRab(Object.fromEntries(((c.data as { akun_kode: string; nilai: number }[]) || []).map((r) => [r.akun_kode, Number(r.nilai)])))
       setP(a.data as Laba)
       setRows((b.data as BB[]) || [])
     })()
@@ -41,6 +52,15 @@ export default function ProyekDetail() {
     }
     return [...m.values()].sort((a, b) => (a.tipe === b.tipe ? b.total - a.total : a.tipe === 'pendapatan' ? -1 : 1))
   }, [rows])
+
+  // Realisasi biaya per akun (untuk dibandingkan dengan RAB)
+  const real = (kode: string) => grup.find((g) => g.kode === kode)?.total || 0
+  const simpanRab = async () => {
+    setRabMsg('')
+    const data = AKUN_RAB.map(([kode]) => ({ proyek_id: pid, akun_kode: kode, nilai: rab[kode] || 0 }))
+    const { error } = await supabase.from('rab_proyek').upsert(data, { onConflict: 'proyek_id,akun_kode' })
+    setRabMsg(error ? error.message : '✓ ' + (lang === 'id' ? 'RAB tersimpan' : 'Budget saved'))
+  }
 
   if (!p) return <div className="text-gray-500">{t('memuat')}</div>
 
@@ -62,6 +82,65 @@ export default function ProyekDetail() {
           </div>
         ))}
       </div>
+
+      {/* Anggaran (RAB) vs realisasi */}
+      {(() => {
+        const tRab = AKUN_RAB.reduce((a, [k]) => a + (rab[k] || 0), 0)
+        const tReal = AKUN_RAB.reduce((a, [k]) => a + real(k), 0)
+        const bar = (r: number, b: number) => {
+          if (!b) return null
+          const pct = (r / b) * 100
+          const c = pct > 100 ? 'bg-red-600' : pct >= 90 ? 'bg-amber-500' : 'bg-green-600'
+          return (
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-full min-w-16 overflow-hidden rounded bg-gray-200 dark:bg-gray-700"><div className={`h-full ${c}`} style={{ width: Math.min(100, pct) + '%' }} /></div>
+              <span className={`w-12 text-right text-xs tabular-nums ${pct > 100 ? 'font-bold text-red-600' : ''}`}>{pct.toFixed(0)}%</span>
+            </div>
+          )
+        }
+        return (
+          <div className="card overflow-x-auto p-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+              <span className="font-semibold">{lang === 'id' ? 'Anggaran (RAB) vs Realisasi' : 'Budget vs Actual'}</span>
+              <div className="no-print flex items-center gap-2 text-sm">
+                {rabMsg && <span className="text-xs text-gray-500">{rabMsg}</span>}
+                <button className="btn-primary" onClick={simpanRab}>{t('simpan')}</button>
+              </div>
+            </div>
+            <table className="min-w-full">
+              <thead><tr>
+                <th className="th">{lang === 'id' ? 'Kategori' : 'Category'}</th><th className="th text-right">RAB</th>
+                <th className="th text-right">{lang === 'id' ? 'Realisasi' : 'Actual'}</th><th className="th text-right">{lang === 'id' ? 'Sisa' : 'Remaining'}</th><th className="th w-40" />
+              </tr></thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                {AKUN_RAB.map(([k, id, en]) => {
+                  const b = rab[k] || 0, r = real(k)
+                  return (
+                    <tr key={k}>
+                      <td className="td">{lang === 'id' ? id : en}</td>
+                      <td className="td w-44"><MoneyInput className="input text-right" value={b} onChange={(v) => setRab((x) => ({ ...x, [k]: Number(v) || 0 }))} /></td>
+                      <td className="td text-right tabular-nums">{rp(r)}</td>
+                      <td className={`td text-right tabular-nums ${b && b - r < 0 ? 'font-semibold text-red-600' : ''}`}>{b ? rp(b - r) : '-'}</td>
+                      <td className="td">{bar(r, b)}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot><tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
+                <td className="td">{t('total')}</td><td className="td text-right tabular-nums">{rp(tRab)}</td>
+                <td className="td text-right tabular-nums">{rp(tReal)}</td>
+                <td className={`td text-right tabular-nums ${tRab && tRab - tReal < 0 ? 'text-red-600' : ''}`}>{tRab ? rp(tRab - tReal) : '-'}</td>
+                <td className="td">{bar(tReal, tRab)}</td>
+              </tr></tfoot>
+            </table>
+            {tRab > 0 && p.nilai_kontrak > 0 && (
+              <div className="px-4 py-2 text-xs text-gray-500">
+                {lang === 'id' ? 'Perkiraan laba sesuai RAB' : 'Planned profit'}: <b>{rp(p.nilai_kontrak / 1.11 - tRab)}</b> ({lang === 'id' ? 'nilai kontrak sebelum PPN − RAB' : 'contract excl. VAT − budget'})
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       <div className="no-print">
         <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} fixed={{ proyek_id: pid }} onFormChange={terminCalc} />

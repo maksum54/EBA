@@ -71,7 +71,14 @@ export function ProyekPage() {
 export const TerminPage = () => { const { t } = useT(); return <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} onFormChange={terminCalc} filterKey="status" search /> }
 export const KasbonPage = () => { const { t } = useT(); return <CrudPage table="kasbon" title={t('kasbon')} hint={t('hint_kasbon')} fields={F_KASBON} orderBy="tanggal" filterKey="status" search /> }
 export const RealisasiPage = () => { const { t } = useT(); return <CrudPage table="kasbon_realisasi" title={t('realisasi')} fields={F_REALISASI} orderBy="tanggal" /> }
-export const GajiPage = () => { const { t } = useT(); return <CrudPage table="penggajian" title={t('penggajian')} fields={F_GAJI} orderBy="tanggal" /> }
+export const GajiPage = () => {
+  const { t, lang } = useT()
+  return <CrudPage table="penggajian" title={t('penggajian')} fields={F_GAJI} orderBy="tanggal" search
+    rowAction={(r) => <>
+      <Link className="text-eba-600 hover:underline" to={`/slip?id=${r.id}`}>{lang === 'id' ? 'Slip' : 'Payslip'}</Link>
+      <Link className="ml-2 text-gray-500 hover:underline" to={`/slip?periode=${encodeURIComponent(String(r.periode))}`} title={String(r.periode)}>{lang === 'id' ? 'Slip 1 periode' : 'All in period'}</Link>
+    </>} />
+}
 export const BiayaPage = () => { const { t } = useT(); return <CrudPage table="biaya_lain" title={t('biaya_lain')} fields={F_BIAYA} orderBy="tanggal" /> }
 export const KaryawanPage = () => { const { t } = useT(); return <CrudPage table="karyawan" title={t('karyawan')} fields={F_KARYAWAN} /> }
 export const SupplierPage = () => { const { t } = useT(); return <CrudPage table="supplier" title={t('supplier')} fields={F_SUPPLIER} /> }

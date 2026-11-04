@@ -4,7 +4,8 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase, supabaseReady } from './lib/supabase'
 import { useT } from './lib/i18n'
 import Layout from './components/Layout'
-import Login from './pages/Login'
+import SlipGaji from './pages/SlipGaji'
+import Login, { SandiBaru } from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import ProyekDetail from './pages/ProyekDetail'
 import Laporan from './pages/Laporan'
@@ -19,10 +20,11 @@ export default function App() {
   const { t } = useT()
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(false)
+  const [pulih, setPulih] = useState(false)  // datang dari link "lupa kata sandi"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => { setSession(data.session); setReady(true) })
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((e, s) => { setSession(s); if (e === 'PASSWORD_RECOVERY') setPulih(true) })
     return () => data.subscription.unsubscribe()
   }, [])
 
@@ -43,6 +45,7 @@ export default function App() {
     </div>
   )
   if (!session) return <Login />
+  if (pulih) return <SandiBaru selesai={() => setPulih(false)} />
 
   return (
     <BrowserRouter>
@@ -56,6 +59,7 @@ export default function App() {
           <Route path="kasbon" element={<KasbonPage />} />
           <Route path="realisasi" element={<RealisasiPage />} />
           <Route path="gaji" element={<GajiPage />} />
+          <Route path="slip" element={<SlipGaji />} />
           <Route path="gaji-mingguan" element={<GajiMingguan />} />
           <Route path="gaji-bulanan" element={<GajiBulanan />} />
           <Route path="biaya" element={<BiayaPage />} />

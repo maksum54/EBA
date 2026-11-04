@@ -27,13 +27,19 @@ export default function Dashboard() {
     (async () => {
       const geser = (hari: number) => { const d = new Date(); d.setDate(d.getDate() - hari); return d.toLocaleDateString('sv') }
       const awal6 = (() => { const d = new Date(); d.setMonth(d.getMonth() - 5, 1); return d.toLocaleDateString('sv') })()
-      const [ut, tg, tr, kb, bb] = await Promise.all([
+      const [ut, tg, tr, kb, bb, rb, pl] = await Promise.all([
         supabase.from('v_pembelian').select('sisa').eq('lewat_tempo', true),
         supabase.from('termin').select('nilai_bersih,tgl_tagih').eq('status', 'ditagih'),
         supabase.from('termin').select('nilai_bersih').eq('status', 'rencana'),
         supabase.from('kasbon').select('nominal,tanggal').eq('status', 'terbuka').lte('tanggal', geser(7)),
         supabase.from('v_buku_besar').select('tanggal,tipe,debit,kredit').in('tipe', ['pendapatan', 'beban']).gte('tanggal', awal6),
+        supabase.from('rab_proyek').select('proyek_id,nilai'),
+        supabase.from('v_proyek_laba').select('id,biaya'),
       ])
+      // Proyek yang biayanya sudah >= 90% RAB
+      const rabP: Record<number, number> = {}
+      for (const r of (rb.data as { proyek_id: number; nilai: number }[]) || []) rabP[r.proyek_id] = (rabP[r.proyek_id] || 0) + Number(r.nilai)
+      const lewatRab = ((pl.data as { id: number; biaya: number }[]) || []).filter((x) => rabP[x.id] > 0 && Number(x.biaya) >= rabP[x.id] * 0.9)
       const sum = (d: unknown, k: string) => ((d as Record<string, number>[]) || []).reduce((a, r) => a + Number(r[k]), 0)
       const len = (d: unknown) => ((d as unknown[]) || []).length
       const telatTagih = ((tg.data as { nilai_bersih: number; tgl_tagih: string | null }[]) || []).filter((r) => r.tgl_tagih && r.tgl_tagih <= geser(30))
@@ -44,6 +50,7 @@ export default function Dashboard() {
         { to: '/termin', label: id ? 'Termin ditagih, menunggu cair' : 'Invoices awaiting payment', n: len(tg.data), total: sum(tg.data, 'nilai_bersih'), warna: 'border-blue-500 text-blue-700 dark:text-blue-300' },
         { to: '/termin', label: id ? 'Termin belum ditagih' : 'Invoices not yet billed', n: len(tr.data), total: sum(tr.data, 'nilai_bersih'), warna: 'border-gray-400 text-gray-700 dark:text-gray-300' },
         { to: '/kasbon', label: id ? 'Kasbon > 7 hari belum direalisasi' : 'Advances open > 7 days', n: len(kb.data), total: sum(kb.data, 'nominal'), warna: 'border-eba-500 text-eba-700 dark:text-eba-100' },
+        { to: lewatRab.length === 1 ? `/proyek/${lewatRab[0].id}` : '/proyek', label: id ? 'Proyek biaya ≥ 90% RAB' : 'Projects ≥ 90% of budget', n: lewatRab.length, total: lewatRab.reduce((a, x) => a + Number(x.biaya), 0), warna: 'border-red-500 text-red-700 dark:text-red-300' },
       ].filter((a) => a.n > 0))
       // Grafik 6 bulan terakhir
       const m: Record<string, { pend: number; biaya: number }> = {}
