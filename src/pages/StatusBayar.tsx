@@ -16,7 +16,7 @@ type P = { id: number; kode_eba: string | null; nama: string; nilai_kontrak: num
 type Tm = { proyek_id: number; nilai_dpp: number; ppn: number; nilai_bersih: number; status: string }
 type Form = { pid: number; tgl: string; dpp: number; pphPct: number; nama: string }
 
-const ambilPph = () => { try { return Number(localStorage.getItem('eba-pph-pct') || 0) } catch { return 0 } }
+const ambilPph = () => 0  // kebijakan EBA: PPh tidak dipotong (isi manual kalau ada bukti potong)
 
 export default function StatusBayar() {
   const { lang } = useT()
