@@ -12,7 +12,7 @@ import { cetak, tglFile } from '../lib/cetak'
  * Tombol "✓ Sudah dibayar" langsung membuat Termin berstatus "diterima"
  * (jurnal Bank Mandiri ↔ Pendapatan dibuat otomatis oleh database).
  */
-type P = { id: number; kode_eba: string | null; nama: string; nilai_kontrak: number; status: string; catatan: string | null }
+type P = { id: number; kode_eba: string | null; nama: string; nilai_kontrak: number; status: string; catatan: string | null; tgl_mulai: string | null }
 type Tm = { proyek_id: number; nilai_dpp: number; ppn: number; nilai_bersih: number; status: string }
 type Form = { pid: number; tgl: string; dpp: number; pphPct: number; nama: string }
 
@@ -26,13 +26,15 @@ export default function StatusBayar() {
   const [fs, setFs] = useState<'' | 'belum' | 'sebagian' | 'lunas'>('')
   const [penyedia, setPenyedia] = useState<'' | 'ardana' | 'eba'>('')
   const [cari, setCari] = useState('')
+  const [bln, setBln] = useState('')   // filter bulan 'YYYY-MM'
+  const namaBulan = (ym: string) => ym ? new Date(ym + '-01').toLocaleDateString(id ? 'id-ID' : 'en-GB', { month: 'long', year: 'numeric' }) : (id ? 'Tanpa tanggal' : 'No date')
   const [form, setForm] = useState<Form | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([
-      supabase.from('proyek').select('id,kode_eba,nama,nilai_kontrak,status,catatan').in('status', ['berjalan', 'selesai']).order('tgl_mulai', { ascending: false }),
+      supabase.from('proyek').select('id,kode_eba,nama,nilai_kontrak,status,catatan,tgl_mulai').in('status', ['berjalan', 'selesai']).order('tgl_mulai', { ascending: false }),
       supabase.from('termin').select('proyek_id,nilai_dpp,ppn,nilai_bersih,status'),
     ])
     setProyek((a.data as P[]) || [])
@@ -53,6 +55,7 @@ export default function StatusBayar() {
   })
   const tampil = data.filter((x) =>
     (!fs || x.st === fs) &&
+    (!bln || (x.tgl_mulai || '').slice(0, 7) === bln) &&
     (!penyedia || (penyedia === 'ardana' ? x.ardana : !x.ardana)) &&
     (!cari.trim() || `${x.kode_eba} ${x.nama} ${x.catatan}`.toLowerCase().includes(cari.toLowerCase())))
 
@@ -89,7 +92,7 @@ export default function StatusBayar() {
 
   return (
     <div className="space-y-4">
-      <Kop judul={id ? 'Status Pembayaran Proyek' : 'Project Payment Status'} sub={`${labelSt[fs]}${penyedia ? ' · ' + (penyedia === 'ardana' ? 'PT Ardana' : 'PT EBA') : ''} · ${tglFile()}`} />
+      <Kop judul={id ? 'Status Pembayaran Proyek' : 'Project Payment Status'} sub={`${labelSt[fs]}${bln ? ' · ' + namaBulan(bln) : ''}${penyedia ? ' · ' + (penyedia === 'ardana' ? 'PT Ardana' : 'PT EBA') : ''} · ${tglFile()}`} />
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{id ? 'Status Pembayaran Proyek' : 'Project Payment Status'}</h1>
         <button className="btn-ghost" onClick={() => cetak(`Status Pembayaran ${labelSt[fs]} ${tglFile()}`)}>🖨 {id ? 'Cetak' : 'Print'}</button>
@@ -110,6 +113,12 @@ export default function StatusBayar() {
           <option value="ardana">PT Ardana</option>
           <option value="eba">PT EBA</option>
         </select>
+        <select className={`input w-auto ${bln ? 'border-eba-500' : ''}`} value={bln} onChange={(e) => setBln(e.target.value)}>
+          <option value="">{id ? 'Bulan: Semua' : 'Month: All'}</option>
+          {[...new Set(data.map((x) => (x.tgl_mulai || '').slice(0, 7)))].sort().reverse().map((m) => (
+            <option key={m} value={m}>{namaBulan(m)} ({data.filter((x) => (x.tgl_mulai || '').slice(0, 7) === m).length})</option>
+          ))}
+        </select>
         <input className="input ml-auto w-full max-w-xs" placeholder={'🔍 ' + (id ? 'Cari nama / kode / nomor PO' : 'Search')} value={cari} onChange={(e) => setCari(e.target.value)} />
       </div>
 
@@ -124,13 +133,27 @@ export default function StatusBayar() {
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={6}>{id ? 'Tidak ada data.' : 'No data.'}</td></tr>}
-            {tampil.map((x) => (
+            {tampil.map((x, i) => (
               <Fragment key={x.id}>
+                {(i === 0 || (tampil[i - 1].tgl_mulai || '').slice(0, 7) !== (x.tgl_mulai || '').slice(0, 7)) && (() => {
+                  const m = (x.tgl_mulai || '').slice(0, 7)
+                  const grp = tampil.filter((y) => (y.tgl_mulai || '').slice(0, 7) === m)
+                  return (
+                    <tr className="bg-gray-100 dark:bg-gray-800">
+                      <td className="td py-1.5 text-sm font-semibold">📅 {namaBulan(m)} <span className="font-normal text-gray-500">({grp.length})</span></td>
+                      <td className="td py-1.5 text-right text-xs tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.kontrak, 0))}</td>
+                      <td className="td py-1.5 text-right text-xs tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.terima, 0))}</td>
+                      <td className="td py-1.5 text-right text-xs font-semibold tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.sisa, 0))}</td>
+                      <td className="td py-1.5" colSpan={2} />
+                    </tr>
+                  )
+                })()}
                 <tr className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="td">
                     <Link to={`/proyek/${x.id}`} className="font-medium text-eba-600 hover:underline">{x.kode_eba || '#' + x.id}</Link>
                     {x.ardana && <span className="ml-2 rounded bg-gray-100 px-1.5 text-[10px] text-gray-600 dark:bg-gray-800 dark:text-gray-400">ARDANA</span>}
                     <div className="text-xs text-gray-500">{x.nama}</div>
+                    {x.tgl_mulai && <div className="text-[11px] text-gray-400">{new Date(x.tgl_mulai).toLocaleDateString(id ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
                   </td>
                   <td className="td whitespace-nowrap text-right tabular-nums">{rp(x.kontrak)}</td>
                   <td className="td whitespace-nowrap text-right tabular-nums">{rp(x.terima)}</td>
