@@ -6,7 +6,7 @@ import { applyTheme, getTheme } from '../lib/theme'
 
 const NAV: { group: string; items: [string, string][] }[] = [
   { group: '', items: [['/', 'dashboard'], ['/proyek', 'proyek'], ['/laporan', 'laporan']] },
-  { group: 'transaksi', items: [['/termin', 'termin'], ['/pembelian', 'pembelian'], ['/kasbon', 'kasbon'],
+  { group: 'transaksi', items: [['/status-bayar', 'status_pembayaran'], ['/termin', 'termin'], ['/pembelian', 'pembelian'], ['/kasbon', 'kasbon'],
     ['/realisasi', 'realisasi'], ['/gaji-mingguan', 'gaji_mingguan'], ['/gaji-bulanan', 'gaji_bulanan'], ['/gaji', 'penggajian'], ['/biaya', 'biaya_lain'], ['/manual', 'jurnal_manual']] },
   { group: 'master', items: [['/karyawan', 'karyawan'], ['/supplier', 'supplier'], ['/klien', 'klien']] },
 ]

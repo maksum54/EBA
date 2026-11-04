@@ -9,6 +9,7 @@ const dict: Record<string, [string, string]> = {
   termin: ['Termin', 'Billing Terms'],
   pembelian: ['Pembelian Material', 'Material Purchases'],
   kasbon: ['Kasbon Lapangan', 'Field Cash Advances'],
+  status_pembayaran: ['Status Pembayaran', 'Payment Status'],
   realisasi: ['Realisasi Kasbon', 'Advance Settlements'],
   penggajian: ['Riwayat Penggajian', 'Payroll History'],
   biaya_lain: ['Biaya Lain', 'Other Expenses'],

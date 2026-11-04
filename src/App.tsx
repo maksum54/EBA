@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase, supabaseReady } from './lib/supabase'
 import { useT } from './lib/i18n'
 import Layout from './components/Layout'
+import StatusBayar from './pages/StatusBayar'
 import SlipGaji from './pages/SlipGaji'
 import Login, { SandiBaru } from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="proyek" element={<ProyekPage />} />
           <Route path="proyek/:id" element={<ProyekDetail />} />
           <Route path="termin" element={<TerminPage />} />
+          <Route path="status-bayar" element={<StatusBayar />} />
           <Route path="pembelian" element={<Pembelian />} />
           <Route path="kasbon" element={<KasbonPage />} />
           <Route path="realisasi" element={<RealisasiPage />} />
