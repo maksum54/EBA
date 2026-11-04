@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
@@ -30,6 +30,18 @@ export default function ProyekDetail() {
     })()
   }, [pid])
 
+  const [tutup, setTutup] = useState<Record<string, boolean>>({})
+  // Kelompokkan per akun: pendapatan dulu, lalu biaya dari yang terbesar
+  const grup = useMemo(() => {
+    const m = new Map<string, { kode: string; nama: string; tipe: string; total: number; rows: BB[] }>()
+    for (const r of rows) {
+      const g = m.get(r.akun_kode) || { kode: r.akun_kode, nama: r.akun_nama, tipe: r.tipe, total: 0, rows: [] }
+      g.total += r.tipe === 'pendapatan' ? r.kredit - r.debit : r.debit - r.kredit
+      g.rows.push(r); m.set(r.akun_kode, g)
+    }
+    return [...m.values()].sort((a, b) => (a.tipe === b.tipe ? b.total - a.total : a.tipe === 'pendapatan' ? -1 : 1))
+  }, [rows])
+
   if (!p) return <div className="text-gray-500">{t('memuat')}</div>
 
   return (
@@ -55,22 +67,37 @@ export default function ProyekDetail() {
         <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} fixed={{ proyek_id: pid }} onFormChange={terminCalc} />
       </div>
 
+      {/* Rincian per kategori (akun), dengan subtotal */}
       <div className="card overflow-x-auto p-0">
-        <div className="border-b border-gray-200 px-4 py-3 font-semibold dark:border-gray-700">{t('pendapatan')} & {t('biaya')}</div>
+        <div className="border-b border-gray-200 px-4 py-3 font-semibold dark:border-gray-700">{t('pendapatan')} & {t('biaya')} — {t('per_kategori')}</div>
+        {grup.length === 0 && <div className="td text-gray-500">{t('kosong')}</div>}
         <table className="min-w-full">
-          <thead><tr><th className="th">{t('tanggal')}</th><th className="th">{t('akun')}</th><th className="th">{t('keterangan')}</th>
-            <th className="th text-right">{t('pendapatan')}</th><th className="th text-right">{t('biaya')}</th></tr></thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {rows.length === 0 && <tr><td className="td text-gray-500" colSpan={5}>{t('kosong')}</td></tr>}
-            {rows.map((r, i) => (
-              <tr key={i}>
-                <td className="td whitespace-nowrap">{tgl(r.tanggal)}</td>
-                <td className="td">{r.akun_kode} {r.akun_nama}</td>
-                <td className="td">{r.keterangan}</td>
-                <td className="td text-right tabular-nums">{r.tipe === 'pendapatan' ? rp(r.kredit - r.debit) : ''}</td>
-                <td className="td text-right tabular-nums">{r.tipe === 'beban' ? rp(r.debit - r.kredit) : ''}</td>
-              </tr>
+          <tbody>
+            {grup.map((g) => (
+              <Fragment key={g.kode}>
+                <tr className="cursor-pointer select-none bg-gray-50 hover:bg-gray-100 dark:bg-gray-800/60 dark:hover:bg-gray-800"
+                  onClick={() => setTutup((x) => ({ ...x, [g.kode]: !x[g.kode] }))}>
+                  <td className="td font-semibold" colSpan={2}>
+                    <span className="mr-1 inline-block w-3 text-gray-400">{tutup[g.kode] ? '▸' : '▾'}</span>
+                    {g.nama} <span className="ml-1 text-xs font-normal text-gray-500">({g.rows.length})</span>
+                  </td>
+                  <td className={`td text-right font-semibold tabular-nums ${g.tipe === 'pendapatan' ? 'text-green-700 dark:text-green-400' : ''}`}>{rp(g.total)}</td>
+                </tr>
+                {!tutup[g.kode] && g.rows.map((r, i) => (
+                  <tr key={g.kode + i} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="td w-28 whitespace-nowrap pl-9 text-gray-500">{tgl(r.tanggal)}</td>
+                    <td className="td">{r.keterangan}</td>
+                    <td className="td whitespace-nowrap text-right tabular-nums">{rp(r.tipe === 'pendapatan' ? r.kredit - r.debit : r.debit - r.kredit)}</td>
+                  </tr>
+                ))}
+              </Fragment>
             ))}
+            {grup.length > 0 && (
+              <tr className="border-t-2 border-gray-300 dark:border-gray-600">
+                <td className="td font-bold" colSpan={2}>{t('laba')}</td>
+                <td className={`td text-right text-base font-bold tabular-nums ${p.laba < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>{rp(p.laba)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
