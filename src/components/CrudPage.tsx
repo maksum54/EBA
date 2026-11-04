@@ -36,9 +36,11 @@ type Props = {
   rowAction?: (r: Row) => React.ReactNode
   filterKey?: string   // kolom 'select' yang dipakai sebagai tombol filter (mis. 'status')
   search?: boolean     // tampilkan kotak cari
+  filters?: string[]   // kolom yang diberi dropdown filter (nilai diambil dari data)
+  total?: boolean      // tampilkan baris total untuk kolom uang
 }
 
-export default function CrudPage({ table, title, hint, fields, orderBy = 'id', fixed, onFormChange, rowAction, filterKey, search }: Props) {
+export default function CrudPage({ table, title, hint, fields, orderBy = 'id', fixed, onFormChange, rowAction, filterKey, search, filters = [], total }: Props) {
   const { t, lang } = useT()
   const [rows, setRows] = useState<Row[]>([])
   const [refs, setRefs] = useState<Record<string, Row[]>>({})
@@ -142,8 +144,12 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
   const [fVal, setFVal] = useState<string>(() => { try { return localStorage.getItem(simpanKey) || '' } catch { return '' } })
   const pilihF = (v: string) => { setFVal(v); try { localStorage.setItem(simpanKey, v) } catch { /* abaikan */ } }
   const [cari, setCari] = useState('')
+  const [dd, setDd] = useState<Record<string, string>>({})   // nilai dropdown filter
+  const ddFields = filters.map((k) => fields.find((f) => f.key === k)).filter(Boolean) as Field[]
+  const labelOf = (f: Field, v: unknown) => f.type === 'ref' ? refLabel(f, v) : f.type === 'select' ? optLabel(f, v) : f.type === 'date' ? tgl(v as string) : String(v ?? '-')
   const tampil = rows.filter((r) => {
     if (fField && fVal && r[fField.key] !== fVal) return false
+    for (const f of ddFields) if (dd[f.key] && String(r[f.key] ?? '') !== dd[f.key]) return false
     if (!cari.trim()) return true
     const q = cari.toLowerCase()
     return cols.some((f) => {
@@ -159,7 +165,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
         <button className="btn-primary" onClick={() => setForm(blank())}>+ {t('tambah')}</button>
       </div>
       {hint && <p className="text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
-      {(fField || search) && (
+      {(fField || search || ddFields.length > 0) && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {fField && [{ v: '', id: 'Semua', en: 'All' }, ...(fField.options || [])].map((o) => (
             <button key={o.v} onClick={() => pilihF(o.v)}
@@ -169,6 +175,19 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
               {o[lang]} <span className="opacity-70">{o.v ? rows.filter((r) => r[fField.key] === o.v).length : rows.length}</span>
             </button>
           ))}
+          {ddFields.map((f) => {
+            const vals = [...new Set(rows.map((r) => String(r[f.key] ?? '')))]
+              .map((v) => [v, v === '' ? labelOf(f, null) : labelOf(f, f.type === 'ref' ? Number(v) : v)] as [string, string])
+              .sort((a, b) => f.key === 'periode' ? 0 : a[1].localeCompare(b[1]))
+            return (
+              <select key={f.key} className={`input w-auto max-w-[16rem] ${dd[f.key] ? 'border-eba-500 ring-1 ring-eba-500/30' : ''}`}
+                value={dd[f.key] || ''} onChange={(e) => setDd((x) => ({ ...x, [f.key]: e.target.value }))}>
+                <option value="">{t(f.key)}: {lang === 'id' ? 'Semua' : 'All'}</option>
+                {vals.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            )
+          })}
+          {Object.values(dd).some(Boolean) && <button className="text-xs text-gray-500 hover:text-eba-600" onClick={() => setDd({})}>✕ {lang === 'id' ? 'Reset filter' : 'Clear filters'}</button>}
           {search && <input className="input ml-auto w-full max-w-xs" placeholder={'🔍 ' + t('cari')} value={cari} onChange={(e) => setCari(e.target.value)} />}
         </div>
       )}
@@ -233,6 +252,16 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
               </tr>
             ))}
           </tbody>
+          {total && tampil.length > 0 && (
+            <tfoot><tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
+              {cols.map((f, i) => (
+                <td key={f.key} className={'td ' + (f.type === 'money' ? 'whitespace-nowrap text-right tabular-nums' : '')}>
+                  {f.type === 'money' ? rp(tampil.reduce((a, r) => a + Number(r[f.key] || 0), 0))
+                    : i === 0 ? <>{t('total')} <span className="text-xs font-normal text-gray-500">({tampil.length})</span></> : ''}
+                </td>
+              ))}<td className="td" />
+            </tr></tfoot>
+          )}
         </table>
       </div>
     </div>

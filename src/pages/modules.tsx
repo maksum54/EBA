@@ -73,7 +73,7 @@ export const KasbonPage = () => { const { t } = useT(); return <CrudPage table="
 export const RealisasiPage = () => { const { t } = useT(); return <CrudPage table="kasbon_realisasi" title={t('realisasi')} fields={F_REALISASI} orderBy="tanggal" /> }
 export const GajiPage = () => {
   const { t, lang } = useT()
-  return <CrudPage table="penggajian" title={t('penggajian')} fields={F_GAJI} orderBy="tanggal" search
+  return <CrudPage table="penggajian" title={t('penggajian')} fields={F_GAJI} orderBy="tanggal" search total filters={['periode', 'karyawan_id', 'proyek_id']}
     rowAction={(r) => <>
       <Link className="text-eba-600 hover:underline" to={`/slip?id=${r.id}`}>{lang === 'id' ? 'Slip' : 'Payslip'}</Link>
       <Link className="ml-2 text-gray-500 hover:underline" to={`/slip?periode=${encodeURIComponent(String(r.periode))}`} title={String(r.periode)}>{lang === 'id' ? 'Slip 1 periode' : 'All in period'}</Link>
