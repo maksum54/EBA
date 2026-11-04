@@ -64,6 +64,7 @@ export default function GajiMingguan() {
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [muatUlang, setMuatUlang] = useState(0) // naikkan untuk membuang perubahan & ambil ulang dari database
 
   const kosong = (k: Kar): Baris => ({ hari: '', tarif: k.tarif, jam: '', pulang: '', hl: '', tl: k.tarif_lembur || 0, proyek_id: proyekUmum })
   // Hari lembur kosong = sama dengan hari kerja. Total jam = (pulang − 17.00) × hari lembur.
@@ -103,9 +104,12 @@ export default function GajiMingguan() {
             : kosong(k)
         }
         setSudah(sv); setBaris(b)
+        // tampilkan proyek yang tersimpan di pilihan atas
+        const pertama = Object.values(sv)[0]
+        if (pertama) setProyekUmum(pertama.proyek_id ?? null)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [kar, periode])
+  }, [kar, periode, muatUlang])
 
   // Upah = hari × tarif harian + lembur resmi (1,5× jam pertama, 2× jam berikutnya)
   const uangLembur = (b?: Baris) => (b ? lemburDari(b).rp : 0)
@@ -125,6 +129,19 @@ export default function GajiMingguan() {
       || (b.proyek_id ?? null) !== (s.proyek_id ?? null)
   }
   const berubah = kar.filter(beda)
+  // Batalkan semua perubahan yang belum disimpan
+  const batal = () => { setMuatUlang((n) => n + 1) }
+  // Hapus SEMUA gaji yang sudah tersimpan di minggu ini (mis. salah minggu / salah proyek)
+  const hapusSemua = async () => {
+    const ids = Object.values(sudah).map((x) => x.id).filter(Boolean) as number[]
+    if (!ids.length || !confirm(t('gm_konfirmasi_hapus_semua').replace('{n}', String(ids.length)))) return
+    setBusy(true)
+    const { error } = await supabase.from('penggajian').delete().in('id', ids)
+    setBusy(false)
+    if (error) { setErr(error.message); return }
+    setMsg(`${ids.length} ${t('gm_terhapus')}`)
+    setMuatUlang((n) => n + 1)
+  }
   const hapusGaji = async (k: Kar) => {
     const s = sudah[k.id]
     if (!s?.id || !confirm(t('yakin_hapus'))) return
@@ -194,6 +211,7 @@ export default function GajiMingguan() {
               <option value="">{t('kantor')}</option>
               {pro.map((p) => <option key={p.id} value={p.id}>{(p.kode_eba || p.kode_lpse) + ' · ' + p.nama}</option>)}
             </select>
+            <span className="mt-0.5 block text-xs text-gray-500">{t('gm_hint_proyek')}</span>
           </label>
         </div>
 
@@ -273,7 +291,11 @@ export default function GajiMingguan() {
             {berubah.length > 0 && <div><div className="text-xs text-gray-500">{t('gm_diubah')}</div><div className="font-semibold tabular-nums text-amber-600">{berubah.length} {t('gm_orang')}</div></div>}
             {baru.length > 0 && <div><div className="text-xs text-gray-500">{t('gm_akan_disimpan')}</div><div className="font-semibold tabular-nums text-eba-600">{baru.length} {t('gm_orang')} · {rp(totalBaru)}</div></div>}
           </div>
-          <button className="btn-primary px-5 py-2" disabled={busy} onClick={simpan}>{t('simpan')}</button>
+          <div className="flex flex-wrap gap-2">
+            {rekap.length > 0 && <button className="btn-ghost text-red-600" disabled={busy} onClick={hapusSemua}>🗑 {t('gm_hapus_semua')}</button>}
+            {(berubah.length > 0 || baru.length > 0) && <button className="btn-ghost" disabled={busy} onClick={batal}>↺ {t('gm_batal_ubah')}</button>}
+            <button className="btn-primary px-5 py-2" disabled={busy} onClick={simpan}>{t('simpan')}</button>
+          </div>
         </div>
       </div>
 
