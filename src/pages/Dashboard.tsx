@@ -88,7 +88,14 @@ export default function Dashboard() {
     ['kasbon_terbuka', saldo.kasbon, saldo.kasbon > 0 ? 'text-eba-600' : 'text-gray-900 dark:text-gray-100'],
   ]
 
-  const tampil = fs ? laba.filter((p) => p.status === fs) : laba
+  // Filter pembayaran klien: pendapatan (DPP) dibanding nilai kontrak sebelum PPN
+  const [fb, setFb] = useState<'' | 'lunas' | 'sebagian' | 'belum'>('')
+  const stBayar = (p: Laba) => {
+    const dpp = Number(p.nilai_kontrak) / 1.11, d = Number(p.pendapatan)
+    return d <= 0 ? 'belum' : d >= dpp - 1 ? 'lunas' : 'sebagian'
+  }
+  const perStatus = fs ? laba.filter((p) => p.status === fs) : laba
+  const tampil = fb ? perStatus.filter((p) => stBayar(p) === fb) : perStatus
 
   return (
     <div className="space-y-6">
@@ -151,7 +158,7 @@ export default function Dashboard() {
         )
       })()}
 
-      <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')} · ${t('per_tanggal')} ${tgl(today())}`} />
+      <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')}${fb ? ' · ' + ({ lunas: 'Sudah diterima', sebagian: 'Sebagian', belum: 'Belum diterima' } as Record<string, string>)[fb] : ''} · ${t('per_tanggal')} ${tgl(today())}`} />
       <div className="card overflow-x-auto p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <span className="font-semibold">{t('laba_proyek')}</span>
@@ -167,6 +174,15 @@ export default function Dashboard() {
                 </button>
               )
             })}
+            <span className="mx-1 self-center text-gray-300">|</span>
+            {([['', lang === 'id' ? 'Semua bayar' : 'All'], ['lunas', lang === 'id' ? '🟢 Sudah diterima' : '🟢 Received'], ['sebagian', lang === 'id' ? '🟡 Sebagian' : '🟡 Partial'], ['belum', lang === 'id' ? '🔴 Belum diterima' : '🔴 Not received']] as const).map(([v, l]) => (
+              <button key={v} onClick={() => setFb(v)}
+                className={`rounded-full border px-3 py-1 transition ${fb === v
+                  ? 'border-gray-800 bg-gray-800 text-white dark:border-gray-200 dark:bg-gray-200 dark:text-gray-900'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
+                {l} <span className="opacity-70">{v ? perStatus.filter((p) => stBayar(p) === v).length : perStatus.length}</span>
+              </button>
+            ))}
             <button className="ml-2 rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
               onClick={() => cetak(`Rekap Proyek ${fs ? (STATUS_PROYEK.find((x) => x.v === fs)?.id || fs) : 'Semua'} ${tglFile()}`)}>🖨 {t('cetak')}</button>
           </div>
