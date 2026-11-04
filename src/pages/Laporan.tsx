@@ -5,7 +5,7 @@ import { rp, tgl, today } from '../lib/format'
 import Kop from '../components/Kop'
 import { cetak } from '../lib/cetak'
 
-type BB = { jurnal_id: number; tanggal: string; keterangan: string; sumber: string; akun_kode: string; akun_nama: string; tipe: string; debit: number; kredit: number }
+type BB = { proyek_id: number | null; jurnal_id: number; tanggal: string; keterangan: string; sumber: string; akun_kode: string; akun_nama: string; tipe: string; debit: number; kredit: number }
 type Tab = 'laba_rugi' | 'neraca' | 'buku_besar'
 
 // Laporan formal dari jurnal: Laba Rugi (periode), Neraca (per tanggal), Buku Besar.
@@ -17,6 +17,11 @@ export default function Laporan() {
   const [dari, setDari] = useState(today().slice(0, 4) + '-01-01') // awal tahun berjalan
   const [sampai, setSampai] = useState(today())
   const [all, setAll] = useState<BB[]>([])
+  const [proyek, setProyek] = useState<Record<number, { kode_eba: string | null; nama: string }>>({})
+  useEffect(() => {
+    supabase.from('proyek').select('id,kode_eba,nama').then(({ data }) =>
+      setProyek(Object.fromEntries(((data as { id: number; kode_eba: string | null; nama: string }[]) || []).map((p) => [p.id, p]))))
+  }, [])
 
   useEffect(() => {
     supabase.from('v_buku_besar').select('*').lte('tanggal', sampai).order('tanggal').order('jurnal_id')
@@ -62,12 +67,25 @@ export default function Laporan() {
               </td>
               <td className={`td text-right tabular-nums ${tx.length ? 'font-medium' : ''}`}>{rp(i.v)}</td>
             </tr>
-            {tx.map((r, k) => (
-              <tr key={k} className={`text-sm text-gray-600 dark:text-gray-400 ${lipat ? 'hidden print:table-row' : ''}`}>
-                <td className="td py-1 pl-12"><span className="mr-3 inline-block w-16 whitespace-nowrap tabular-nums">{tgl(r.tanggal).replace(/ \d{4}$/, '')}</span>{r.keterangan}</td>
-                <td className="td whitespace-nowrap py-1 text-right tabular-nums">{rp(['aset', 'beban'].includes(r.tipe) ? r.debit - r.kredit : r.kredit - r.debit)}</td>
-              </tr>
-            ))}
+            {tx.map((r, k) => {
+              const pr = r.proyek_id ? proyek[r.proyek_id] : null
+              return (
+                <tr key={k} className={`text-xs leading-tight text-gray-600 dark:text-gray-400 ${lipat ? 'hidden print:table-row' : ''}`}>
+                  <td className="px-4 py-1 pl-12">
+                    <div className="flex gap-3">
+                      <span className="w-12 shrink-0 whitespace-nowrap tabular-nums">{tgl(r.tanggal).replace(/ \d{4}$/, '')}</span>
+                      <div className="min-w-0">
+                        <div>{r.keterangan}</div>
+                        <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                          {pr ? <>📁 {pr.kode_eba ? <b className="font-medium text-gray-500">{pr.kode_eba}</b> : null} {pr.kode_eba ? '· ' : ''}{pr.nama}</> : <>🏢 {lang === 'id' ? 'Kantor (non-proyek)' : 'Office (non-project)'}</>}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-1 text-right align-top tabular-nums">{rp(['aset', 'beban'].includes(r.tipe) ? r.debit - r.kredit : r.kredit - r.debit)}</td>
+                </tr>
+              )
+            })}
           </Fragment>
         )
       })}
