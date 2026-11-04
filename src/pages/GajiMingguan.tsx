@@ -40,7 +40,7 @@ export const jamPerHari = (pulang: string) => {
   return Math.max(0, Math.round((jam - MULAI_LEMBUR) * 2) / 2) // dibulatkan per 30 menit
 }
 // Pilihan jam pulang (bukan jam sekarang): 17:30 s/d 24:00 tiap 30 menit
-const PILIHAN_PULANG = Array.from({ length: 14 }, (_, i) => {
+export const PILIHAN_PULANG = Array.from({ length: 14 }, (_, i) => {
   const t = 17.5 + i * 0.5
   return `${String(Math.floor(t)).padStart(2, '0')}:${t % 1 ? '30' : '00'}`
 })
