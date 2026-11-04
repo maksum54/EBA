@@ -48,8 +48,8 @@ export default function StatusBayar() {
     const terima = tm.filter((t) => t.status === 'diterima').reduce((a, t) => a + Number(t.nilai_dpp) + Number(t.ppn), 0)
     const bersih = tm.filter((t) => t.status === 'diterima').reduce((a, t) => a + Number(t.nilai_bersih), 0)
     const kontrak = Number(p.nilai_kontrak)
-    const sisa = Math.max(0, kontrak - terima)
-    const st: 'belum' | 'sebagian' | 'lunas' = kontrak > 0 && sisa < 1 ? 'lunas' : terima > 0 ? 'sebagian' : 'belum'
+    const sisa = Math.max(0, Math.round(kontrak / 1.11) - bersih)   // sisa yang belum masuk ke Mandiri (tanpa PPN)
+    const st: 'belum' | 'sebagian' | 'lunas' = kontrak > 0 && kontrak - terima < 1 ? 'lunas' : terima > 0 ? 'sebagian' : 'belum'
     const ardana = (p.catatan || '').toUpperCase().includes('ARDANA')
     return { ...p, kontrak, terima, bersih, sisa, st, ardana }
   })
@@ -61,7 +61,7 @@ export default function StatusBayar() {
 
   const buka = (x: (typeof data)[number]) => {
     setErr('')
-    setForm({ pid: x.id, tgl: today(), dpp: Math.round(x.sisa / 1.11), pphPct: ambilPph(), nama: x.terima > 0 ? 'Pelunasan' : 'Pembayaran Penuh' })
+    setForm({ pid: x.id, tgl: today(), dpp: x.sisa, pphPct: ambilPph(), nama: x.terima > 0 ? 'Pelunasan' : 'Pembayaran Penuh' })
   }
   const simpan = async () => {
     if (!form) return
@@ -127,12 +127,14 @@ export default function StatusBayar() {
           <thead><tr>
             <th className="th">{id ? 'Proyek' : 'Project'}</th>
             <th className="th text-right">{id ? 'Nilai Kontrak' : 'Contract'}</th>
+            <th className="th text-right">PPN 11%<div className="text-[10px] font-normal normal-case">{id ? 'dipotong LEMIGAS' : 'withheld'}</div></th>
+            <th className="th text-right">{id ? 'Harus Diterima' : 'Net due'}<div className="text-[10px] font-normal normal-case">{id ? 'kontrak − PPN' : 'contract − VAT'}</div></th>
             <th className="th text-right">{id ? 'Sudah Diterima' : 'Received'}</th>
             <th className="th text-right">{id ? 'Sisa' : 'Outstanding'}</th>
             <th className="th">Status</th><th className="th no-print" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={6}>{id ? 'Tidak ada data.' : 'No data.'}</td></tr>}
+            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={8}>{id ? 'Tidak ada data.' : 'No data.'}</td></tr>}
             {tampil.map((x, i) => (
               <Fragment key={x.id}>
                 {(i === 0 || (tampil[i - 1].tgl_mulai || '').slice(0, 7) !== (x.tgl_mulai || '').slice(0, 7)) && (() => {
@@ -142,7 +144,8 @@ export default function StatusBayar() {
                     <tr className="bg-gray-100 dark:bg-gray-800">
                       <td className="td py-1.5 text-sm font-semibold">📅 {namaBulan(m)} <span className="font-normal text-gray-500">({grp.length})</span></td>
                       <td className="td py-1.5 text-right text-xs tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.kontrak, 0))}</td>
-                      <td className="td py-1.5 text-right text-xs tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.terima, 0))}</td>
+                      <td className="td py-1.5" /><td className="td py-1.5" />
+                      <td className="td py-1.5 text-right text-xs tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.bersih, 0))}</td>
                       <td className="td py-1.5 text-right text-xs font-semibold tabular-nums text-gray-600">{rp(grp.reduce((a, y) => a + y.sisa, 0))}</td>
                       <td className="td py-1.5" colSpan={2} />
                     </tr>
@@ -156,7 +159,9 @@ export default function StatusBayar() {
                     {x.tgl_mulai && <div className="text-[11px] text-gray-400">{new Date(x.tgl_mulai).toLocaleDateString(id ? 'id-ID' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>}
                   </td>
                   <td className="td whitespace-nowrap text-right tabular-nums">{rp(x.kontrak)}</td>
-                  <td className="td whitespace-nowrap text-right tabular-nums">{rp(x.terima)}</td>
+                  <td className="td whitespace-nowrap text-right tabular-nums text-gray-500">{rp(x.kontrak - Math.round(x.kontrak / 1.11))}</td>
+                  <td className="td whitespace-nowrap text-right tabular-nums">{rp(Math.round(x.kontrak / 1.11))}</td>
+                  <td className="td whitespace-nowrap text-right tabular-nums">{rp(x.bersih)}</td>
                   <td className={`td whitespace-nowrap text-right tabular-nums ${x.sisa > 0 ? 'font-semibold' : 'text-gray-400'}`}>{rp(x.sisa)}</td>
                   <td className="td whitespace-nowrap">{chip(x.st)}</td>
                   <td className="td no-print whitespace-nowrap text-right">
@@ -171,7 +176,7 @@ export default function StatusBayar() {
                   const ppn = Math.round(form.dpp * 0.11), pph = Math.round(form.dpp * form.pphPct / 100)
                   return (
                     <tr className="no-print bg-green-50/60 dark:bg-green-900/10">
-                      <td className="td" colSpan={6}>
+                      <td className="td" colSpan={8}>
                         <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
                           <label>{id ? 'Keterangan' : 'Label'}<input className="input" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} /></label>
                           <label>{id ? 'Tanggal diterima' : 'Date received'}<input type="date" className="input" value={form.tgl} onChange={(e) => setForm({ ...form, tgl: e.target.value })} /></label>
@@ -199,7 +204,9 @@ export default function StatusBayar() {
             <tfoot><tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
               <td className="td">TOTAL <span className="text-xs font-normal text-gray-500">({tampil.length})</span></td>
               <td className="td whitespace-nowrap text-right tabular-nums">{rp(tot('kontrak'))}</td>
-              <td className="td whitespace-nowrap text-right tabular-nums">{rp(tot('terima'))}</td>
+              <td className="td whitespace-nowrap text-right tabular-nums text-gray-500">{rp(tampil.reduce((a, x) => a + x.kontrak - Math.round(x.kontrak / 1.11), 0))}</td>
+              <td className="td whitespace-nowrap text-right tabular-nums">{rp(tampil.reduce((a, x) => a + Math.round(x.kontrak / 1.11), 0))}</td>
+              <td className="td whitespace-nowrap text-right tabular-nums">{rp(tampil.reduce((a, x) => a + x.bersih, 0))}</td>
               <td className="td whitespace-nowrap text-right tabular-nums">{rp(tot('sisa'))}</td>
               <td className="td" colSpan={2} />
             </tr></tfoot>
