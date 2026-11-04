@@ -33,7 +33,8 @@ export default function Layout({ email }: { email: string }) {
         </div>
       </header>
       <div className="flex">
-        <nav className={`no-print ${open ? 'block' : 'hidden'} w-56 shrink-0 border-r border-gray-200 bg-white p-3 md:block dark:border-gray-800 dark:bg-gray-900`}>
+        {open && <div className="no-print fixed inset-0 top-[49px] z-20 bg-black/30 md:hidden" onClick={() => setOpen(false)} />}
+        <nav className={`no-print ${open ? "block" : "hidden"} fixed left-0 top-[49px] z-30 h-[calc(100dvh-49px)] shadow-lg md:sticky md:z-auto md:shadow-none w-56 shrink-0 self-start overflow-y-auto border-r border-gray-200 bg-white p-3 md:block dark:border-gray-800 dark:bg-gray-900`}>
           {NAV.map((g) => (
             <div key={g.group} className="mb-4">
               {g.group && <div className="mb-1 px-2 text-xs font-semibold uppercase text-gray-400">{t(g.group)}</div>}
