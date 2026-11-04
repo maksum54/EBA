@@ -12,7 +12,7 @@ type Tab = 'laba_rugi' | 'neraca' | 'buku_besar'
 export default function Laporan() {
   const { t } = useT()
   const [tab, setTab] = useState<Tab>('laba_rugi')
-  const [dari, setDari] = useState('2026-11-03')
+  const [dari, setDari] = useState(today().slice(0, 4) + '-01-01') // awal tahun berjalan
   const [sampai, setSampai] = useState(today())
   const [all, setAll] = useState<BB[]>([])
 
