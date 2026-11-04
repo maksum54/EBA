@@ -46,7 +46,7 @@ export default function SlipGaji() {
         <button className="btn-primary" onClick={() => cetak(namaFile)}>🖨 {id ? 'Cetak / Simpan PDF' : 'Print / Save PDF'} ({rows.length})</button>
       </div>
 
-      {rows.map((r) => {
+      {rows.map((r, i) => {
         const n = (v: unknown) => Number(v || 0)
         const pokok = n(r.nominal) - n(r.lembur) - n(r.tunjangan) + n(r.potongan)
         const harian = r.karyawan?.tipe_gaji === 'mingguan'
@@ -57,7 +57,7 @@ export default function SlipGaji() {
         if (n(r.lembur)) baris.push([id ? 'Lembur' : 'Overtime', n(r.jam_lembur) ? `${n(r.jam_lembur)} ${id ? 'jam' : 'hrs'}${n(r.hari_lembur) ? ` · ${n(r.hari_lembur)} ${id ? 'hari' : 'days'}` : ''}` : '', n(r.lembur)])
         if (n(r.tunjangan)) baris.push([id ? 'Tunjangan' : 'Allowance', '', n(r.tunjangan)])
         return (
-          <div key={r.id} className="slip card mx-auto max-w-2xl break-after-page bg-white text-gray-900 print:max-w-none print:border-0 print:shadow-none">
+          <div key={r.id} className={`slip card mx-auto max-w-2xl ${i > 0 ? 'break-before-page' : ''} bg-white text-gray-900 print:max-w-none print:border-0 print:shadow-none`}>
             <img src="/kop-eba.png" alt="Kop PT. EBA Karya Mandiri" className="w-full" />
             <div className="my-4 text-center">
               <div className="text-lg font-bold tracking-wide">SLIP GAJI</div>
@@ -72,7 +72,7 @@ export default function SlipGaji() {
                   [id ? 'Proyek' : 'Project', r.proyek ? `${r.proyek.kode_eba ? r.proyek.kode_eba + ' · ' : ''}${r.proyek.nama}` : (id ? 'Kantor' : 'Office')],
                   [id ? 'Tanggal bayar' : 'Pay date', tgl(r.tanggal)],
                 ] as [string, string][]).map(([k, v]) => (
-                  <tr key={k}><td className="w-36 py-0.5 text-gray-600">{k}</td><td className="py-0.5">: <b>{v}</b></td></tr>
+                  <tr key={k} className="align-top"><td className="w-32 py-0.5 text-gray-600">{k}</td><td className="w-4 py-0.5">:</td><td className="py-0.5 font-semibold">{v}</td></tr>
                 ))}
               </tbody>
             </table>
