@@ -65,11 +65,11 @@ export const terminCalc = (f: R, k: string) =>
 
 export function ProyekPage() {
   const { t } = useT()
-  return <CrudPage table="proyek" title={t('proyek')} hint={t('hint_proyek')} fields={F_PROYEK}
+  return <CrudPage table="proyek" title={t('proyek')} hint={t('hint_proyek')} fields={F_PROYEK} filterKey="status" search
     rowAction={(r) => <Link className="text-eba-600 hover:underline" to={`/proyek/${r.id}`}>{t('detail')}</Link>} />
 }
-export const TerminPage = () => { const { t } = useT(); return <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} onFormChange={terminCalc} /> }
-export const KasbonPage = () => { const { t } = useT(); return <CrudPage table="kasbon" title={t('kasbon')} hint={t('hint_kasbon')} fields={F_KASBON} orderBy="tanggal" /> }
+export const TerminPage = () => { const { t } = useT(); return <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} onFormChange={terminCalc} filterKey="status" search /> }
+export const KasbonPage = () => { const { t } = useT(); return <CrudPage table="kasbon" title={t('kasbon')} hint={t('hint_kasbon')} fields={F_KASBON} orderBy="tanggal" filterKey="status" search /> }
 export const RealisasiPage = () => { const { t } = useT(); return <CrudPage table="kasbon_realisasi" title={t('realisasi')} fields={F_REALISASI} orderBy="tanggal" /> }
 export const GajiPage = () => { const { t } = useT(); return <CrudPage table="penggajian" title={t('penggajian')} fields={F_GAJI} orderBy="tanggal" /> }
 export const BiayaPage = () => { const { t } = useT(); return <CrudPage table="biaya_lain" title={t('biaya_lain')} fields={F_BIAYA} orderBy="tanggal" /> }

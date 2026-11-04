@@ -34,9 +34,11 @@ type Props = {
   fixed?: Record<string, unknown>  // filter + nilai tetap, contoh { proyek_id: 5 }
   onFormChange?: (form: Record<string, unknown>, changedKey: string) => Record<string, unknown>
   rowAction?: (r: Row) => React.ReactNode
+  filterKey?: string   // kolom 'select' yang dipakai sebagai tombol filter (mis. 'status')
+  search?: boolean     // tampilkan kotak cari
 }
 
-export default function CrudPage({ table, title, hint, fields, orderBy = 'id', fixed, onFormChange, rowAction }: Props) {
+export default function CrudPage({ table, title, hint, fields, orderBy = 'id', fixed, onFormChange, rowAction, filterKey, search }: Props) {
   const { t, lang } = useT()
   const [rows, setRows] = useState<Row[]>([])
   const [refs, setRefs] = useState<Record<string, Row[]>>({})
@@ -134,6 +136,22 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
 
   const cols = fields.filter((f) => !f.hideInTable && !(fixed && f.key in fixed))
 
+  // ---- filter & pencarian (di browser, cepat) ----
+  const fField = filterKey ? fields.find((f) => f.key === filterKey) : undefined
+  const simpanKey = 'eba-filter-' + table
+  const [fVal, setFVal] = useState<string>(() => { try { return localStorage.getItem(simpanKey) || '' } catch { return '' } })
+  const pilihF = (v: string) => { setFVal(v); try { localStorage.setItem(simpanKey, v) } catch { /* abaikan */ } }
+  const [cari, setCari] = useState('')
+  const tampil = rows.filter((r) => {
+    if (fField && fVal && r[fField.key] !== fVal) return false
+    if (!cari.trim()) return true
+    const q = cari.toLowerCase()
+    return cols.some((f) => {
+      const v = f.type === 'ref' ? refLabel(f, r[f.key]) : f.type === 'select' ? optLabel(f, r[f.key]) : r[f.key]
+      return String(v ?? '').toLowerCase().includes(q)
+    })
+  })
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -141,6 +159,19 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
         <button className="btn-primary" onClick={() => setForm(blank())}>+ {t('tambah')}</button>
       </div>
       {hint && <p className="text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
+      {(fField || search) && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          {fField && [{ v: '', id: 'Semua', en: 'All' }, ...(fField.options || [])].map((o) => (
+            <button key={o.v} onClick={() => pilihF(o.v)}
+              className={`rounded-full border px-3 py-1 transition ${fVal === o.v
+                ? 'border-eba-600 bg-eba-600 text-white'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
+              {o[lang]} <span className="opacity-70">{o.v ? rows.filter((r) => r[fField.key] === o.v).length : rows.length}</span>
+            </button>
+          ))}
+          {search && <input className="input ml-auto w-full max-w-xs" placeholder={'🔍 ' + t('cari')} value={cari} onChange={(e) => setCari(e.target.value)} />}
+        </div>
+      )}
       {err && <div className="rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{err}</div>}
 
       {form && (
@@ -187,9 +218,9 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <tr><td className="td text-gray-500" colSpan={cols.length + 1}>{t('memuat')}</td></tr>
-            ) : rows.length === 0 ? (
+            ) : tampil.length === 0 ? (
               <tr><td className="td text-gray-500" colSpan={cols.length + 1}>{t('kosong')}</td></tr>
-            ) : rows.map((r) => (
+            ) : tampil.map((r) => (
               <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 {cols.map((f) => (
                   <td key={f.key} className={'td ' + (f.type === 'money' ? 'whitespace-nowrap text-right tabular-nums' : f.type === 'bool' ? 'text-center' : '')}>{show(f, r)}</td>

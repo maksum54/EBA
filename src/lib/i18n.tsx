@@ -125,6 +125,7 @@ const dict: Record<string, [string, string]> = {
   gm_pulang: ['Pulang Jam', 'Off Work At'],
   gaji_bulanan: ['Gaji Bulanan', 'Monthly Pay'],
   per_kategori: ['per Kategori', 'by Category'],
+  cari: ['Cari nama, kode, klien…', 'Search name, code, client…'],
   semua_status: ['Semua status', 'All statuses'],
   tanpa_tender: ['tanpa Tender/Batal', 'excl. Tender/Lost'],
   gb_judul: ['Rekap Gaji Bulanan Karyawan', 'Monthly Payroll'],
