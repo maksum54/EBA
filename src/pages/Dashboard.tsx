@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
-import { rp } from '../lib/format'
+import { rp, tgl, today } from '../lib/format'
 import { STATUS_PROYEK } from '../lib/options'
+import Kop from '../components/Kop'
+import { cetak, tglFile } from '../lib/cetak'
 
 type Laba = { id: number; kode_eba: string | null; kode_lpse: string | null; nama: string; status: string;
   nilai_kontrak: number; pendapatan: number; biaya: number; laba: number }
@@ -52,8 +54,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold">{t('dashboard')}</h1>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <h1 className="no-print text-xl font-bold">{t('dashboard')}</h1>
+      <div className="no-print grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map(([k, v, c]) => (
           <div key={k} className="card">
             <div className="text-xs font-medium uppercase text-gray-500">{t(k)}</div>
@@ -62,15 +64,16 @@ export default function Dashboard() {
         ))}
       </div>
       {telat > 0 && (
-        <Link to="/pembelian" className="block rounded-lg border border-eba-500 bg-eba-50 p-3 text-sm text-eba-700 dark:bg-eba-900/30 dark:text-eba-100">
+        <Link to="/pembelian" className="no-print block rounded-lg border border-eba-500 bg-eba-50 p-3 text-sm text-eba-700 dark:bg-eba-900/30 dark:text-eba-100">
           ⚠ {t('utang_lewat_tempo')}: <b className="tabular-nums">{rp(telat)}</b>
         </Link>
       )}
 
+      <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')} · ${t('per_tanggal')} ${tgl(today())}`} />
       <div className="card overflow-x-auto p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <span className="font-semibold">{t('laba_proyek')}</span>
-          <div className="flex flex-wrap gap-1 text-sm">
+          <div className="no-print flex flex-wrap gap-1 text-sm">
             {[{ v: '', id: 'Semua', en: 'All' }, ...STATUS_PROYEK].map((o) => {
               const n = o.v ? laba.filter((p) => p.status === o.v).length : laba.length
               return (
@@ -82,6 +85,8 @@ export default function Dashboard() {
                 </button>
               )
             })}
+            <button className="ml-2 rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              onClick={() => cetak(`Rekap Proyek ${fs ? (STATUS_PROYEK.find((x) => x.v === fs)?.id || fs) : 'Semua'} ${tglFile()}`)}>🖨 {t('cetak')}</button>
           </div>
         </div>
         <table className="min-w-full">
