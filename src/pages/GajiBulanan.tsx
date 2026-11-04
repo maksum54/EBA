@@ -38,6 +38,11 @@ export default function GajiBulanan() {
   const [muatUlang, setMuatUlang] = useState(0)
 
   const periode = `Bulan ${BULAN[ym.m]} ${ym.y}`
+  // Tanggal bayar otomatis = akhir bulan (atau hari ini kalau bulannya belum selesai)
+  useEffect(() => {
+    const akhir = new Date(ym.y, ym.m + 1, 0).toLocaleDateString('sv')
+    setTglBayar(akhir < today() ? akhir : today())
+  }, [ym.y, ym.m])
   const geserBulan = (n: number) => setYm(({ y, m }) => { const x = new Date(y, m + n, 1); return { y: x.getFullYear(), m: x.getMonth() } })
 
   const kosong = (k: Kar): Baris => ({ pokok: k.tarif, tunj: '', pulang: '', hl: '', tl: k.tarif_lembur || Math.round(k.tarif / 173), pot: '', ket: '', proyek_id: proyekUmum })

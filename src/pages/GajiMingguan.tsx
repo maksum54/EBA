@@ -76,6 +76,9 @@ export default function GajiMingguan() {
 
   const selesai = geser(mulai, 6)
   const periode = `Minggu ${tgl(mulai)} – ${tgl(selesai)}`
+  // Tanggal bayar otomatis = akhir minggu (atau hari ini kalau minggunya belum selesai),
+  // supaya gaji yang diinput belakangan tetap masuk ke periode yang benar di laporan.
+  useEffect(() => { setTglBayar(selesai < today() ? selesai : today()) }, [selesai])
 
   useEffect(() => {
     (async () => {
