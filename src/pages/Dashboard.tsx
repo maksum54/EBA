@@ -15,16 +15,47 @@ export default function Dashboard() {
   const { t, lang } = useT()
   const [laba, setLaba] = useState<Laba[]>([])
   const [saldo, setSaldo] = useState({ bank: 0, utang: 0, kasbon: 0, piutang: 0 })
-  const [telat, setTelat] = useState(0)
   // Filter status proyek (disimpan supaya tetap saat halaman dibuka lagi)
   const [fs, setFs] = useState<string>(() => { try { return localStorage.getItem('eba-filter-proyek') || '' } catch { return '' } })
   const pilihFs = (v: string) => { setFs(v); try { localStorage.setItem('eba-filter-proyek', v) } catch { /* abaikan */ } }
 
-  // Utang supplier yang sudah lewat jatuh tempo (merah di dashboard)
+  // "Perlu Tindakan" + grafik bulanan
+  type Aksi = { to: string; label: string; n: number; total: number; warna: string }
+  const [aksi, setAksi] = useState<Aksi[]>([])
+  const [bulan, setBulan] = useState<{ b: string; pend: number; biaya: number }[]>([])
   useEffect(() => {
-    supabase.from('v_pembelian').select('sisa').eq('lewat_tempo', true)
-      .then(({ data }) => setTelat(((data as { sisa: number }[]) || []).reduce((a, r) => a + Number(r.sisa), 0)))
-  }, [])
+    (async () => {
+      const geser = (hari: number) => { const d = new Date(); d.setDate(d.getDate() - hari); return d.toLocaleDateString('sv') }
+      const awal6 = (() => { const d = new Date(); d.setMonth(d.getMonth() - 5, 1); return d.toLocaleDateString('sv') })()
+      const [ut, tg, tr, kb, bb] = await Promise.all([
+        supabase.from('v_pembelian').select('sisa').eq('lewat_tempo', true),
+        supabase.from('termin').select('nilai_bersih,tgl_tagih').eq('status', 'ditagih'),
+        supabase.from('termin').select('nilai_bersih').eq('status', 'rencana'),
+        supabase.from('kasbon').select('nominal,tanggal').eq('status', 'terbuka').lte('tanggal', geser(7)),
+        supabase.from('v_buku_besar').select('tanggal,tipe,debit,kredit').in('tipe', ['pendapatan', 'beban']).gte('tanggal', awal6),
+      ])
+      const sum = (d: unknown, k: string) => ((d as Record<string, number>[]) || []).reduce((a, r) => a + Number(r[k]), 0)
+      const len = (d: unknown) => ((d as unknown[]) || []).length
+      const telatTagih = ((tg.data as { nilai_bersih: number; tgl_tagih: string | null }[]) || []).filter((r) => r.tgl_tagih && r.tgl_tagih <= geser(30))
+      const id = lang === 'id'
+      setAksi([
+        { to: '/pembelian', label: id ? 'Utang supplier lewat jatuh tempo' : 'Overdue supplier bills', n: len(ut.data), total: sum(ut.data, 'sisa'), warna: 'border-red-500 text-red-700 dark:text-red-300' },
+        { to: '/termin', label: id ? 'Termin ditagih > 30 hari belum cair' : 'Invoices unpaid > 30 days', n: telatTagih.length, total: telatTagih.reduce((a, r) => a + Number(r.nilai_bersih), 0), warna: 'border-amber-500 text-amber-700 dark:text-amber-300' },
+        { to: '/termin', label: id ? 'Termin ditagih, menunggu cair' : 'Invoices awaiting payment', n: len(tg.data), total: sum(tg.data, 'nilai_bersih'), warna: 'border-blue-500 text-blue-700 dark:text-blue-300' },
+        { to: '/termin', label: id ? 'Termin belum ditagih' : 'Invoices not yet billed', n: len(tr.data), total: sum(tr.data, 'nilai_bersih'), warna: 'border-gray-400 text-gray-700 dark:text-gray-300' },
+        { to: '/kasbon', label: id ? 'Kasbon > 7 hari belum direalisasi' : 'Advances open > 7 days', n: len(kb.data), total: sum(kb.data, 'nominal'), warna: 'border-eba-500 text-eba-700 dark:text-eba-100' },
+      ].filter((a) => a.n > 0))
+      // Grafik 6 bulan terakhir
+      const m: Record<string, { pend: number; biaya: number }> = {}
+      for (let i = 5; i >= 0; i--) { const d = new Date(); d.setMonth(d.getMonth() - i, 1); m[d.toLocaleDateString('sv').slice(0, 7)] = { pend: 0, biaya: 0 } }
+      for (const r of (bb.data as { tanggal: string; tipe: string; debit: number; kredit: number }[]) || []) {
+        const x = m[r.tanggal.slice(0, 7)]; if (!x) continue
+        if (r.tipe === 'pendapatan') x.pend += Number(r.kredit) - Number(r.debit)
+        else x.biaya += Number(r.debit) - Number(r.kredit)
+      }
+      setBulan(Object.entries(m).map(([b, v]) => ({ b, ...v })))
+    })()
+  }, [lang])
 
   useEffect(() => {
     (async () => {
@@ -63,11 +94,55 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
-      {telat > 0 && (
-        <Link to="/pembelian" className="no-print block rounded-lg border border-eba-500 bg-eba-50 p-3 text-sm text-eba-700 dark:bg-eba-900/30 dark:text-eba-100">
-          ⚠ {t('utang_lewat_tempo')}: <b className="tabular-nums">{rp(telat)}</b>
-        </Link>
-      )}
+      <div className="no-print card">
+        <div className="mb-3 font-semibold">⚡ {lang === 'id' ? 'Perlu Tindakan' : 'Action Needed'}</div>
+        {aksi.length === 0 ? (
+          <div className="text-sm text-green-700 dark:text-green-400">✓ {lang === 'id' ? 'Semua beres, tidak ada yang tertunda.' : 'All clear, nothing pending.'}</div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {aksi.map((a) => (
+              <Link key={a.label} to={a.to} className={`rounded-lg border-l-4 bg-gray-50 p-3 transition hover:bg-gray-100 dark:bg-gray-800/50 dark:hover:bg-gray-800 ${a.warna}`}>
+                <div className="text-xs text-gray-600 dark:text-gray-400">{a.label}</div>
+                <div className="mt-1 flex items-baseline justify-between gap-2">
+                  <b className="text-lg tabular-nums">{rp(a.total)}</b>
+                  <span className="text-xs text-gray-500">{a.n} item →</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {bulan.length > 0 && (() => {
+        const max = Math.max(1, ...bulan.flatMap((x) => [x.pend, x.biaya]))
+        const nm = (b: string) => new Date(b + '-01').toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-GB', { month: 'short', year: '2-digit' })
+        const tp = bulan.reduce((a, x) => a + x.pend, 0), tb = bulan.reduce((a, x) => a + x.biaya, 0)
+        return (
+          <div className="no-print card">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-semibold">{lang === 'id' ? 'Pendapatan vs Biaya (6 bulan)' : 'Revenue vs Expenses (6 months)'}</span>
+              <div className="flex gap-3 text-xs">
+                <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm bg-green-600" />{t('pendapatan')} {rp(tp)}</span>
+                <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rounded-sm bg-eba-600" />{t('biaya')} {rp(tb)}</span>
+              </div>
+            </div>
+            <div className="flex h-48 items-end gap-2 sm:gap-4">
+              {bulan.map((x) => (
+                <div key={x.b} className="flex h-full flex-1 flex-col items-center justify-end">
+                  <div className="flex h-full w-full items-end justify-center gap-1">
+                    <div title={`${t('pendapatan')}: ${rp(x.pend)}`} className="w-1/2 max-w-8 rounded-t bg-green-600 transition-all" style={{ height: `${(x.pend / max) * 100}%`, minHeight: x.pend ? 2 : 0 }} />
+                    <div title={`${t('biaya')}: ${rp(x.biaya)}`} className="w-1/2 max-w-8 rounded-t bg-eba-600 transition-all" style={{ height: `${(x.biaya / max) * 100}%`, minHeight: x.biaya ? 2 : 0 }} />
+                  </div>
+                  <div className="mt-1 text-[11px] text-gray-500">{nm(x.b)}</div>
+                  <div className={`text-[10px] tabular-nums ${x.pend - x.biaya < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>
+                    {x.pend || x.biaya ? (x.pend - x.biaya >= 0 ? '+' : '−') + (Math.abs(x.pend - x.biaya) / 1e6).toFixed(1) + 'jt' : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')} · ${t('per_tanggal')} ${tgl(today())}`} />
       <div className="card overflow-x-auto p-0">
