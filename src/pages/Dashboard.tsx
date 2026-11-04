@@ -87,6 +87,27 @@ export default function Dashboard() {
               </tr>
             ))}
           </tbody>
+          {laba.length > 0 && (() => {
+            // Total semua proyek (proyek Tender & Batal tidak dihitung di nilai kontrak)
+            const aktif = laba.filter((p) => p.status !== 'tender' && p.status !== 'batal')
+            const kontrak = aktif.reduce((a, p) => a + Number(p.nilai_kontrak), 0)
+            const pend = laba.reduce((a, p) => a + Number(p.pendapatan), 0)
+            const biaya = laba.reduce((a, p) => a + Number(p.biaya), 0)
+            const lr = pend - biaya
+            return (
+              <tfoot>
+                <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
+                  <td className="td">{t('total')} <span className="text-xs font-normal text-gray-500">({aktif.length} {t('proyek').toLowerCase()} · {t('tanpa_tender')})</span></td>
+                  <td className="td" />
+                  <td className="td text-right tabular-nums">{rp(kontrak)}</td>
+                  <td className="td text-right tabular-nums">{rp(pend)}</td>
+                  <td className="td text-right tabular-nums">{rp(biaya)}</td>
+                  <td className={`td text-right tabular-nums ${lr < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>{rp(lr)}</td>
+                  <td className="td text-right tabular-nums">{pend > 0 ? ((lr / pend) * 100).toFixed(1) + '%' : '-'}</td>
+                </tr>
+              </tfoot>
+            )
+          })()}
         </table>
       </div>
     </div>
