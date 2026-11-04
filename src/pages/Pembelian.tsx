@@ -33,6 +33,11 @@ export default function Pembelian() {
   const [bayarNota, setBayarNota] = useState<Nota | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  // Filter daftar nota
+  const [fStatus, setFStatus] = useState('')
+  const [fProyek, setFProyek] = useState('')
+  const [fKat, setFKat] = useState('')
+  const [cari, setCari] = useState('')
 
   const load = useCallback(async () => {
     const [n, p, s] = await Promise.all([
@@ -116,6 +121,15 @@ export default function Pembelian() {
     return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${c}`}>{t('st_' + n.status)}</span>
   }
 
+  const tampil = rows.filter((n) => {
+    if (fStatus && n.status !== fStatus) return false
+    if (fProyek === 'kantor' && n.proyek_id) return false
+    if (fProyek && fProyek !== 'kantor' && n.proyek_id !== Number(fProyek)) return false
+    if (fKat && n.kategori !== fKat) return false
+    const q = cari.trim().toLowerCase()
+    return !q || [n.no_nota, n.uraian, namaSupplier(n.supplier_id), namaProyek(n.proyek_id)].some((x) => String(x ?? '').toLowerCase().includes(q))
+  })
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -192,6 +206,28 @@ export default function Pembelian() {
         </div>
       )}
 
+      {/* Filter */}
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        {[{ v: '', k: 'semua' }, { v: 'belum', k: 'st_belum' }, { v: 'dicicil', k: 'st_dicicil' }, { v: 'lunas', k: 'st_lunas' }].map((o) => (
+          <button key={o.v} onClick={() => setFStatus(o.v)}
+            className={`rounded-full border px-3 py-1 transition ${fStatus === o.v
+              ? 'border-eba-600 bg-eba-600 text-white'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
+            {t(o.k)} <span className="opacity-70">{o.v ? rows.filter((n) => n.status === o.v).length : rows.length}</span>
+          </button>
+        ))}
+        <select className="input w-auto" value={fProyek} onChange={(e) => setFProyek(e.target.value)}>
+          <option value="">{t('semua_proyek')}</option>
+          <option value="kantor">{t('kantor_singkat')}</option>
+          {proyek.filter((p) => rows.some((n) => n.proyek_id === p.id)).map((p) => <option key={p.id} value={p.id}>{p.kode_eba || p.kode_lpse} · {p.nama.slice(0, 40)}</option>)}
+        </select>
+        <select className="input w-auto" value={fKat} onChange={(e) => setFKat(e.target.value)}>
+          <option value="">{t('semua_kategori')}</option>
+          {KATEGORI_BELI.map((o) => <option key={o.v} value={o.v}>{o[lang]}</option>)}
+        </select>
+        <input className="input ml-auto w-full max-w-xs" placeholder={'🔍 ' + t('cari_nota')} value={cari} onChange={(e) => setCari(e.target.value)} />
+      </div>
+
       {bayarNota && <PanelBayar nota={bayarNota} onClose={() => { setBayarNota(null); load() }} />}
 
       {/* Daftar nota: kartu di HP, tabel di layar lebar */}
@@ -203,8 +239,8 @@ export default function Pembelian() {
             <th className="th text-right">{t('sisa')}</th><th className="th">{t('status')}</th><th className="th">{t('foto')}</th><th className="th" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {rows.length === 0 && <tr><td className="td text-gray-500" colSpan={10}>{t('kosong')}</td></tr>}
-            {rows.map((n) => (
+            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={10}>{t('kosong')}</td></tr>}
+            {tampil.map((n) => (
               <tr key={n.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                 <td className="td whitespace-nowrap">{tgl(n.tanggal)}</td>
                 <td className="td">{n.no_nota || '-'}</td>
@@ -230,6 +266,16 @@ export default function Pembelian() {
               </tr>
             ))}
           </tbody>
+          {tampil.length > 0 && (
+            <tfoot>
+              <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
+                <td className="td" colSpan={5}>{t('total')} <span className="text-xs font-normal text-gray-500">({tampil.length} nota)</span></td>
+                <td className="td whitespace-nowrap text-right tabular-nums">{rp(tampil.reduce((a, n) => a + Number(n.jumlah), 0))}</td>
+                <td className="td whitespace-nowrap text-right tabular-nums text-eba-600">{rp(tampil.reduce((a, n) => a + Math.max(0, Number(n.sisa)), 0))}</td>
+                <td className="td text-xs font-normal text-gray-500" colSpan={3}>{t('dibayar')}: {rp(tampil.reduce((a, n) => a + Number(n.dibayar), 0))}</td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
     </div>
