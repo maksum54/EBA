@@ -65,31 +65,44 @@ export default function Laporan() {
                 {tx.length > 0 && <span className="no-print mr-1 inline-block w-3 text-gray-400">{lipat ? '▸' : '▾'}</span>}
                 {i.kode} {i.nama} {tx.length > 0 && <span className="text-xs font-normal text-gray-500">({tx.length})</span>}
               </td>
-              <td className={`td text-right tabular-nums ${tx.length ? 'font-medium' : ''}`}>{rp(i.v)}</td>
+              <td className={`td whitespace-nowrap text-right tabular-nums ${tx.length ? 'font-medium' : ''}`}>{rp(i.v)}</td>
             </tr>
-            {tx.map((r, k) => {
-              const pr = r.proyek_id ? proyek[r.proyek_id] : null
-              return (
-                <tr key={k} className={`text-xs leading-tight text-gray-600 dark:text-gray-400 ${lipat ? 'hidden print:table-row' : ''}`}>
-                  <td className="px-4 py-1 pl-12">
-                    <div className="flex gap-3">
-                      <span className="w-12 shrink-0 whitespace-nowrap tabular-nums">{tgl(r.tanggal).replace(/ \d{4}$/, '')}</span>
-                      <div className="min-w-0">
-                        <div>{r.keterangan}</div>
-                        <div className="text-[11px] text-gray-400 dark:text-gray-500">
-                          {pr ? <>📁 {pr.kode_eba ? <b className="font-medium text-gray-500">{pr.kode_eba}</b> : null} {pr.kode_eba ? '· ' : ''}{pr.nama}</> : <>🏢 {lang === 'id' ? 'Kantor (non-proyek)' : 'Office (non-project)'}</>}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-1 text-right align-top tabular-nums">{rp(['aset', 'beban'].includes(r.tipe) ? r.debit - r.kredit : r.kredit - r.debit)}</td>
-                </tr>
-              )
-            })}
+            {(() => {
+              // Kelompokkan transaksi per proyek supaya nama proyek tidak diulang tiap baris
+              const g = new Map<string, BB[]>()
+              for (const r of tx) { const k = String(r.proyek_id ?? ''); g.set(k, [...(g.get(k) || []), r]) }
+              const nilai = (r: BB) => ['aset', 'beban'].includes(r.tipe) ? r.debit - r.kredit : r.kredit - r.debit
+              const cls = lipat ? 'hidden print:table-row' : ''
+              return [...g.entries()].map(([k, rs]) => {
+                const pr = k ? proyek[Number(k)] : null
+                return (
+                  <Fragment key={k}>
+                    <tr className={`text-xs ${cls}`}>
+                      <td className="px-4 pb-0.5 pl-10 pt-2 font-medium text-gray-700 dark:text-gray-300">
+                        {pr ? <>📁 {pr.kode_eba && <b>{pr.kode_eba}</b>}{pr.kode_eba ? ' · ' : ''}{pr.nama}</> : <>🏢 {lang === 'id' ? 'Kantor (non-proyek)' : 'Office (non-project)'}</>}
+                        {g.size > 1 && <span className="ml-1 font-normal text-gray-500">({rs.length})</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-4 pb-0.5 pt-2 text-right text-xs font-medium tabular-nums text-gray-700 dark:text-gray-300">{g.size > 1 ? rp(rs.reduce((a, r) => a + nilai(r), 0)) : ''}</td>
+                    </tr>
+                    {rs.map((r, j) => (
+                      <tr key={j} className={`text-xs leading-snug text-gray-600 dark:text-gray-400 ${cls}`}>
+                        <td className="px-4 py-0.5 pl-14">
+                          <div className="flex gap-3">
+                            <span className="w-11 shrink-0 whitespace-nowrap tabular-nums text-gray-500">{tgl(r.tanggal).replace(/ \d{4}$/, '')}</span>
+                            <span className="min-w-0">{r.keterangan}</span>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-0.5 text-right align-top tabular-nums">{rp(nilai(r))}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                )
+              })
+            })()}
           </Fragment>
         )
       })}
-      <tr><td className="td font-semibold">{t('total')} {title}</td><td className="td text-right font-semibold tabular-nums">{rp(total)}</td></tr>
+      <tr><td className="td font-semibold">{t('total')} {title}</td><td className="td whitespace-nowrap text-right font-semibold tabular-nums">{rp(total)}</td></tr>
     </>
   )
 
@@ -136,7 +149,7 @@ export default function Laporan() {
             <Section title={t('pendapatan')} items={pend} total={sum(pend)} detail />
             <Section title={t('beban')} items={beb} total={sum(beb)} detail />
             <tr className="border-t-2 border-gray-300"><td className="td text-base font-bold">{t('laba')}</td>
-              <td className={`td text-right text-base font-bold tabular-nums ${sum(pend) - sum(beb) < 0 ? 'text-eba-600' : ''}`}>{rp(sum(pend) - sum(beb))}</td></tr>
+              <td className={`td whitespace-nowrap text-right text-base font-bold tabular-nums ${sum(pend) - sum(beb) < 0 ? 'text-eba-600' : ''}`}>{rp(sum(pend) - sum(beb))}</td></tr>
           </tbody></table>
         )}
         {tab === 'neraca' && (

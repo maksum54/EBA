@@ -19,6 +19,13 @@ html.dark { background: #030712; }
   .no-print { display: none !important; }
   body { background: white !important; color: black !important; }
   .print-only { display: block !important; }
+  @page { size: A4; margin: 12mm 12mm 14mm; }
+  html { font-size: 12px; }
+  .card { border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+  main { padding: 0 !important; }
+  tr, .slip { break-inside: avoid; }
+  thead { display: table-header-group; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 .print-only { display: none; }
 
