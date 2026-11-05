@@ -65,7 +65,7 @@ export const terminCalc = (f: R, k: string) =>
 
 export function ProyekPage() {
   const { t } = useT()
-  return <CrudPage table="proyek" title={t('proyek')} hint={t('hint_proyek')} fields={F_PROYEK} filterKey="status" search
+  return <CrudPage table="proyek" title={t('proyek')} hint={t('hint_proyek')} fields={F_PROYEK} filterKey="status" search total
     rowAction={(r) => <Link className="text-eba-600 hover:underline" to={`/proyek/${r.id}`}>{t('detail')}</Link>} />
 }
 export const TerminPage = () => { const { t } = useT(); return <CrudPage table="termin" title={t('termin')} hint={t('hint_termin')} fields={F_TERMIN} onFormChange={terminCalc} filterKey="status" search /> }
