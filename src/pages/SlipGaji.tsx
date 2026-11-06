@@ -54,7 +54,7 @@ export default function SlipGaji() {
           [harian ? (id ? 'Upah harian' : 'Daily wage') : (id ? 'Gaji pokok' : 'Base salary'),
             harian && n(r.hari) ? `${n(r.hari)} ${id ? 'hari' : 'days'} × ${rp(n(r.tarif))}` : '', pokok],
         ]
-        if (n(r.lembur)) baris.push([id ? 'Lembur' : 'Overtime', n(r.jam_lembur) ? `${n(r.jam_lembur)} ${id ? 'jam' : 'hrs'}${n(r.hari_lembur) ? ` · ${n(r.hari_lembur)} ${id ? 'hari' : 'days'}` : ''}` : '', n(r.lembur)])
+        if (n(r.lembur)) baris.push([id ? 'Lembur' : 'Overtime', n(r.hari_lembur) ? `${n(r.hari_lembur)} ${id ? 'hari' : 'days'}` : '', n(r.lembur)])
         if (n(r.tunjangan)) baris.push([id ? 'Tunjangan' : 'Allowance', '', n(r.tunjangan)])
         return (
           <div key={r.id} className={`slip card mx-auto max-w-2xl ${i > 0 ? 'break-before-page' : ''} bg-white text-gray-900 print:max-w-none print:border-0 print:shadow-none`}>

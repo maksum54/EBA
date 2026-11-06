@@ -66,13 +66,14 @@ export default function GajiMingguan() {
   const [busy, setBusy] = useState(false)
   const [muatUlang, setMuatUlang] = useState(0) // naikkan untuk membuang perubahan & ambil ulang dari database
 
-  const kosong = (k: Kar): Baris => ({ hari: '', tarif: k.tarif, jam: '', pulang: '', hl: '', tl: k.tarif_lembur || 0, proyek_id: proyekUmum })
-  // Hari lembur kosong = sama dengan hari kerja. Total jam = (pulang − 17.00) × hari lembur.
-  const hariL = (b: Baris) => (b.pulang ? Number(b.hl || 0) || Number(b.hari || 0) : 0)
+  const kosong = (k: Kar): Baris => ({ hari: '', tarif: k.tarif, jam: '', pulang: '', hl: '', tl: '', proyek_id: proyekUmum })
+  // Lembur = hari lembur × upah lembur per hari (default = upah harian). Jam pulang hanya catatan.
+  const hariL = (b: Baris) => Number(b.hl || 0)
+  const tlEf = (b: Baris) => Number(b.tl || 0) || Number(b.tarif || 0)
   const jamTotal = (b: Baris) => jamPerHari(b.pulang) * hariL(b)
-  const lemburDari = (b: Baris) => hitungLembur(jamTotal(b), hariL(b), Number(b.hari || 0), Number(b.tl || 0))
+  const lemburDari = (b: Baris) => ({ rp: Math.round(hariL(b) * tlEf(b)) })
   const rinci = (b: Baris) => ({ hari: Number(b.hari || 0), tarif: Number(b.tarif || 0), jam_lembur: jamTotal(b),
-    jam_pulang: b.pulang || null, hari_lembur: hariL(b), tarif_lembur: Number(b.tl || 0), lembur: lemburDari(b).rp })
+    jam_pulang: b.pulang || null, hari_lembur: hariL(b), tarif_lembur: hariL(b) ? tlEf(b) : 0, lembur: lemburDari(b).rp })
 
   const selesai = geser(mulai, 6)
   const periode = `Minggu ${tgl(mulai)} – ${tgl(selesai)}`
@@ -103,7 +104,7 @@ export default function GajiMingguan() {
         for (const k of kar) {
           const x = sv[k.id]
           b[k.id] = x
-            ? { hari: x.hari ?? '', tarif: x.tarif ?? k.tarif, jam: x.jam_lembur || '', pulang: x.jam_pulang || (x.jam_lembur && x.hari_lembur ? keJam(Number(x.jam_lembur) / Number(x.hari_lembur)) : ''), hl: x.hari_lembur || '', tl: x.tarif_lembur || k.tarif_lembur || 0, proyek_id: x.proyek_id }
+            ? { hari: x.hari ?? '', tarif: x.tarif ?? k.tarif, jam: x.jam_lembur || '', pulang: x.jam_pulang || (x.jam_lembur && x.hari_lembur ? keJam(Number(x.jam_lembur) / Number(x.hari_lembur)) : ''), hl: x.hari_lembur || '', tl: x.hari_lembur && x.tarif_lembur && Number(x.tarif_lembur) !== Number(x.tarif ?? k.tarif) ? x.tarif_lembur : '', proyek_id: x.proyek_id }
             : kosong(k)
         }
         setSudah(sv); setBaris(b)
@@ -128,7 +129,7 @@ export default function GajiMingguan() {
     if (!s || !b) return false
     return Number(b.hari || 0) !== Number(s.hari || 0) || Number(b.tarif || 0) !== Number(s.tarif || 0)
       || jamTotal(b) !== Number(s.jam_lembur || 0) || hariL(b) !== Number(s.hari_lembur || 0)
-      || Number(b.tl || 0) !== Number(s.tarif_lembur || 0) && jamTotal(b) > 0
+      || hariL(b) > 0 && tlEf(b) !== Number(s.tarif_lembur || 0)
       || (b.proyek_id ?? null) !== (s.proyek_id ?? null)
   }
   const berubah = kar.filter(beda)
@@ -228,7 +229,7 @@ export default function GajiMingguan() {
             <button className="btn-ghost py-1" onClick={() => semua({ hari: '' })}>{t('gm_kosongkan')}</button>
             <span className="ml-3 text-gray-500">{t('gm_pulang_semua')}:</span>
             {['18:00', '19:00', '20:00', '21:00'].map((j) => <button key={j} className="btn-ghost py-1" onClick={() => semua({ pulang: j })}>{j}</button>)}
-            <button className="btn-ghost py-1" onClick={() => semua({ pulang: '', hl: '' })}>{t('gm_tanpa_lembur')}</button>
+            <button className="btn-ghost py-1" onClick={() => semua({ pulang: '', hl: '', tl: '' })}>{t('gm_tanpa_lembur')}</button>
           </div>
           <div className="border-b border-gray-200 bg-amber-50/60 px-4 py-1.5 text-xs text-amber-900 dark:border-gray-700 dark:bg-amber-950/30 dark:text-amber-200">ⓘ {t('gm_info_lembur')}</div>
           <table className="min-w-full">
@@ -264,12 +265,12 @@ export default function GajiMingguan() {
                       </div>
                       {jamPerHari(b.pulang) > 0 && <div className="mt-0.5 text-[11px] text-gray-500">{jamPerHari(b.pulang)} {t('gm_jam_per_hari')}</div>}
                     </td>
-                    <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" placeholder={b.pulang ? String(Number(b.hari || 0) || 0) : '0'} value={b.hl} onChange={(v) => set(k.id, 'hl', v)} /></td>
-                    <td className="td text-center"><MoneyInput className="input mx-auto w-24 text-right" value={b.tl} onChange={(v) => set(k.id, 'tl', v)} />
-                      {uangLembur(b) > 0 && (() => { const l = lemburDari(b); return (
+                    <td className="td text-center"><QtyInput className="input mx-auto w-16 text-center" placeholder="0" value={b.hl} onChange={(v) => set(k.id, 'hl', v)} /></td>
+                    <td className="td text-center"><MoneyInput className="input mx-auto w-28 text-right" placeholder={rp(Number(b.tarif || 0))} value={b.tl} onChange={(v) => set(k.id, 'tl', v)} />
+                      {uangLembur(b) > 0 && (
                         <div className="mt-0.5 whitespace-nowrap text-[11px] leading-tight text-gray-500 tabular-nums">
-                          {l.jam1}×1,5{l.jam2 > 0 && ` + ${l.jam2}×2`} = {rp(l.rp)}
-                        </div>) })()}
+                          {hariL(b)} × {rp(tlEf(b))} = {rp(uangLembur(b))}
+                        </div>)}
                     </td>
                     <td className="td">
                       <select className="input w-36" value={b.proyek_id ?? ''} onChange={(e) => set(k.id, 'proyek_id', e.target.value ? Number(e.target.value) : null)}>
@@ -323,7 +324,7 @@ export default function GajiMingguan() {
                 <td className="text-center">{i + 1}</td><td>{r.nama}</td>
                 <td className="text-center">{r.hari ?? '-'}</td>
                 <td className="text-right">{r.tarif ? rp(r.tarif) : '-'}</td>
-                <td className="text-right">{r.jam_lembur ? `${r.jam_pulang ? 's/d ' + r.jam_pulang + ', ' : ''}${r.jam_lembur} jam = ${rp(r.lembur)}` : '-'}</td>
+                <td className="text-right">{r.lembur ? `${r.hari_lembur || ''} hari = ${rp(r.lembur)}` : '-'}</td>
                 <td className="text-right">{rp(r.nominal)}</td>
                 <td className="h-9 align-top text-[8pt] text-gray-500">{i + 1}.</td>
               </tr>
