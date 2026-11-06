@@ -277,6 +277,7 @@ export default function GajiMingguan() {
                         <option value="">{t('kantor_singkat')}</option>
                         {pro.map((p) => <option key={p.id} value={p.id}>{p.kode_eba || p.kode_lpse}</option>)}
                       </select>
+                      <div className="mt-0.5 max-w-[12rem] truncate text-[11px] text-gray-500" title={pro.find((p) => p.id === b.proyek_id)?.nama}>{pro.find((p) => p.id === b.proyek_id)?.nama || ''}</div>
                     </td>
                     <td className="td whitespace-nowrap text-right font-semibold tabular-nums">{nominal(b) ? rp(nominal(b)) : '-'}
                       {s && <button className="ml-2 text-gray-400 hover:text-red-600" title={t('hapus')} onClick={() => hapusGaji(k)}>✕</button>}
@@ -298,6 +299,7 @@ export default function GajiMingguan() {
           <div className="flex flex-wrap gap-2">
             {rekap.length > 0 && <button className="btn-ghost text-red-600" disabled={busy} onClick={hapusSemua}>🗑 {t('gm_hapus_semua')}</button>}
             {(berubah.length > 0 || baru.length > 0) && <button className="btn-ghost" disabled={busy} onClick={batal}>↺ {t('gm_batal_ubah')}</button>}
+            {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Mingguan ${mulai} sd ${selesai}`)}>🖨 {t('cetak')}</button>}
             <button className="btn-primary px-5 py-2" disabled={busy} onClick={simpan}>{t('simpan')}</button>
           </div>
         </div>
@@ -316,7 +318,7 @@ export default function GajiMingguan() {
           <thead><tr>
             <th className="w-8">No</th><th className="text-left">{t('nama')}</th><th>{t('gm_hari_kerja')}</th>
             <th className="text-right">{t('gm_tarif_hari')}</th><th className="text-right">{t('gm_lembur')}</th>
-            <th className="text-right">{t('total')}</th><th className="w-28">{t('gm_ttd')}</th>
+            <th className="text-left">{t('proyek_id')}</th><th className="text-right">{t('total')}</th><th className="w-28">{t('gm_ttd')}</th>
           </tr></thead>
           <tbody>
             {rekap.map((r, i) => (
@@ -325,13 +327,14 @@ export default function GajiMingguan() {
                 <td className="text-center">{r.hari ?? '-'}</td>
                 <td className="text-right">{r.tarif ? rp(r.tarif) : '-'}</td>
                 <td className="text-right">{r.lembur ? `${r.hari_lembur ? r.hari_lembur + " hari = " : ""}${rp(r.lembur)}` : "-"}</td>
+                <td className="text-[9pt]">{(() => { const p = pro.find((x) => x.id === r.proyek_id); return p ? `${p.kode_eba || p.kode_lpse} · ${p.nama}` : t('kantor_singkat') })()}</td>
                 <td className="text-right">{rp(r.nominal)}</td>
                 <td className="h-9 align-top text-[8pt] text-gray-500">{i + 1}.</td>
               </tr>
             ))}
             <tr className="font-bold">
               <td colSpan={2} className="text-right">{t('total')}</td>
-              <td className="text-center">{hariRekap}</td><td /><td />
+              <td className="text-center">{hariRekap}</td><td /><td /><td />
               <td className="text-right">{rp(totalRekap)}</td><td />
             </tr>
           </tbody>
