@@ -14,6 +14,7 @@ export default function Laporan() {
   const [rinci, setRinci] = useState(true)                       // tampilkan transaksi per akun
   const [tutup, setTutup] = useState<Record<string, boolean>>({}) // akun yang dilipat (layar saja)
   const [tab, setTab] = useState<Tab>('laba_rugi')
+  const [akunF, setAkunF] = useState('') // filter satu akun di Laba Rugi ('' = semua)
   const [dari, setDari] = useState(today().slice(0, 4) + '-01-01') // awal tahun berjalan
   const [sampai, setSampai] = useState(today())
   const [all, setAll] = useState<BB[]>([])
@@ -122,7 +123,7 @@ export default function Laporan() {
         <h1 className="mr-auto text-xl font-bold">{t('laporan')}</h1>
         {tab !== 'neraca' && <label className="text-sm">{t('dari')}<input type="date" className="input" value={dari} onChange={(e) => setDari(e.target.value)} /></label>}
         <label className="text-sm">{tab === 'neraca' ? t('per_tanggal') : t('sampai')}<input type="date" className="input" value={sampai} onChange={(e) => setSampai(e.target.value)} /></label>
-        <button className="btn-ghost" onClick={() => cetak(tab === 'neraca' ? `Neraca per ${sampai}` : `${tab === 'laba_rugi' ? 'Laba Rugi' : 'Buku Besar'} ${dari} sd ${sampai}${tab === 'laba_rugi' && rinci ? ' (rinci)' : ''}`)}>{t('cetak')}</button>
+        <button className="btn-ghost" onClick={() => cetak(tab === 'neraca' ? `Neraca per ${sampai}` : `${tab === 'laba_rugi' ? 'Laba Rugi' + (akunF ? ' ' + ([...pend, ...beb].find((x) => x.kode === akunF)?.nama || akunF) : '') : 'Buku Besar'} ${dari} sd ${sampai}${tab === 'laba_rugi' && rinci ? ' (rinci)' : ''}`)}>{t('cetak')}</button>
       </div>
       <div className="no-print flex flex-wrap items-center gap-2">
         {(['laba_rugi', 'neraca', 'buku_besar'] as Tab[]).map((k) => (
@@ -133,6 +134,12 @@ export default function Laporan() {
             {cepat.map(([l, f]) => (
               <button key={l} onClick={f} className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800">{l}</button>
             ))}
+            {tab === 'laba_rugi' && (
+              <select className="input ml-2 w-auto py-1 text-sm" value={akunF} onChange={(e) => setAkunF(e.target.value)}>
+                <option value="">{lang === 'id' ? 'Semua akun' : 'All accounts'}</option>
+                {[...pend, ...beb].map((a) => <option key={a.kode} value={a.kode}>{a.kode} {a.nama}</option>)}
+              </select>
+            )}
             {tab === 'laba_rugi' && (
               <label className="ml-2 flex cursor-pointer items-center gap-1.5">
                 <input type="checkbox" checked={rinci} onChange={(e) => { setRinci(e.target.checked); setTutup({}) }} />
@@ -146,10 +153,13 @@ export default function Laporan() {
       <div className="card overflow-x-auto p-0">
         {tab === 'laba_rugi' && (
           <table className="min-w-full"><tbody>
+            {akunF ? (() => { const isP = pend.some((a) => a.kode === akunF); const it = (isP ? pend : beb).filter((a) => a.kode === akunF)
+              return <Section title={isP ? t('pendapatan') : t('beban')} items={it} total={sum(it)} detail /> })() : <>
             <Section title={t('pendapatan')} items={pend} total={sum(pend)} detail />
             <Section title={t('beban')} items={beb} total={sum(beb)} detail />
-            <tr className="border-t-2 border-gray-300"><td className="td text-base font-bold">{t('laba')}</td>
-              <td className={`td whitespace-nowrap text-right text-base font-bold tabular-nums ${sum(pend) - sum(beb) < 0 ? 'text-eba-600' : ''}`}>{rp(sum(pend) - sum(beb))}</td></tr>
+            </>}
+            {!akunF && <tr className="border-t-2 border-gray-300"><td className="td text-base font-bold">{t('laba')}</td>
+              <td className={`td whitespace-nowrap text-right text-base font-bold tabular-nums ${sum(pend) - sum(beb) < 0 ? 'text-eba-600' : ''}`}>{rp(sum(pend) - sum(beb))}</td></tr>}
           </tbody></table>
         )}
         {tab === 'neraca' && (
