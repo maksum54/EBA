@@ -193,9 +193,11 @@ export default function Dashboard() {
             <th className="th">{t('proyek')}</th><th className="th">{t('status')}</th>
             <th className="th text-right">{t('nilai_kontrak')}</th><th className="th text-right">{t('pendapatan')}</th>
             <th className="th text-right">{t('biaya')}</th><th className="th text-right">{t('laba')}</th><th className="th text-right">{t('margin')}</th>
+            <th className="th text-right" title="Nilai kontrak ÷ 1,11">{lang === 'id' ? 'Nilai Bersih (−PPN)' : 'Net Value (−VAT)'}</th>
+            <th className="th text-right" title="Nilai bersih − biaya">{lang === 'id' ? 'Proyeksi Laba' : 'Projected Profit'}</th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={7}>{t('kosong')}</td></tr>}
+            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={9}>{t('kosong')}</td></tr>}
             {tampil.map((p) => (
               <tr key={p.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" onClick={() => nav(`/proyek/${p.id}`)}>
                 <td className="td">
@@ -208,6 +210,12 @@ export default function Dashboard() {
                 <td className="td text-right tabular-nums">{rp(p.biaya)}</td>
                 <td className={`td text-right font-semibold tabular-nums ${p.laba < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>{rp(p.laba)}</td>
                 <td className="td text-right tabular-nums">{p.pendapatan > 0 ? ((p.laba / p.pendapatan) * 100).toFixed(1) + '%' : '-'}</td>
+                {(() => { const nb = Math.round(Number(p.nilai_kontrak) / 1.11), pl = nb - Number(p.biaya), m = nb > 0 ? (pl / nb) * 100 : 0
+                  return <>
+                    <td className="td text-right tabular-nums">{rp(nb)}</td>
+                    <td className={`td whitespace-nowrap text-right font-semibold tabular-nums ${m < 10 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>{rp(pl)}
+                      <div className="text-[11px] font-normal">{nb > 0 ? m.toFixed(1) + '%' : '-'}</div></td>
+                  </> })()}
               </tr>
             ))}
           </tbody>
@@ -218,6 +226,7 @@ export default function Dashboard() {
             const pend = tampil.reduce((a, p) => a + Number(p.pendapatan), 0)
             const biaya = tampil.reduce((a, p) => a + Number(p.biaya), 0)
             const lr = pend - biaya
+            const nb = aktif.reduce((a, p) => a + Math.round(Number(p.nilai_kontrak) / 1.11), 0), pl = nb - biaya
             return (
               <tfoot>
                 <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold dark:border-gray-600 dark:bg-gray-800/60">
@@ -228,6 +237,9 @@ export default function Dashboard() {
                   <td className="td text-right tabular-nums">{rp(biaya)}</td>
                   <td className={`td text-right tabular-nums ${lr < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>{rp(lr)}</td>
                   <td className="td text-right tabular-nums">{pend > 0 ? ((lr / pend) * 100).toFixed(1) + '%' : '-'}</td>
+                  <td className="td text-right tabular-nums">{rp(nb)}</td>
+                  <td className={`td whitespace-nowrap text-right tabular-nums ${pl < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>{rp(pl)}
+                    <div className="text-[11px] font-normal">{nb > 0 ? ((pl / nb) * 100).toFixed(1) + '%' : '-'}</div></td>
                 </tr>
               </tfoot>
             )
