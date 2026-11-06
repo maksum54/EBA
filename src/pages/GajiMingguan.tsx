@@ -73,7 +73,7 @@ export default function GajiMingguan() {
   const jamTotal = (b: Baris) => jamPerHari(b.pulang) * hariL(b)
   const lemburDari = (b: Baris) => ({ rp: Math.round(tlEf(b)) })
   const rinci = (b: Baris) => ({ hari: Number(b.hari || 0), tarif: Number(b.tarif || 0), jam_lembur: jamTotal(b),
-    jam_pulang: b.pulang || null, hari_lembur: hariL(b), tarif_lembur: null, lembur: lemburDari(b).rp })
+    jam_pulang: b.pulang || null, hari_lembur: hariL(b), tarif_lembur: 0, lembur: lemburDari(b).rp })
 
   const selesai = geser(mulai, 6)
   const periode = `Minggu ${tgl(mulai)} – ${tgl(selesai)}`
