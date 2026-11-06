@@ -1,3 +1,4 @@
+import { eksporExcel } from '../lib/excel'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
@@ -162,6 +163,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{title}</h1>
+        <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), title)}>📊 Excel</button>
         <button className="btn-primary" onClick={() => setForm(blank())}>+ {t('tambah')}</button>
       </div>
       {hint && <p className="text-sm text-gray-500 dark:text-gray-400">{hint}</p>}

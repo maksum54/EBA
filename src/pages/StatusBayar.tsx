@@ -1,3 +1,4 @@
+import { eksporExcel } from '../lib/excel'
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -95,6 +96,7 @@ export default function StatusBayar() {
       <Kop judul={id ? 'Status Pembayaran Proyek' : 'Project Payment Status'} sub={`${labelSt[fs]}${bln ? ' · ' + namaBulan(bln) : ''}${penyedia ? ' · ' + (penyedia === 'ardana' ? 'PT Ardana' : 'PT EBA') : ''} · ${tglFile()}`} />
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{id ? 'Status Pembayaran Proyek' : 'Project Payment Status'}</h1>
+        <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), `Status Pembayaran ${tglFile()}`)}>📊 Excel</button>
         <button className="btn-ghost" onClick={() => cetak(`Status Pembayaran ${labelSt[fs]} ${tglFile()}`)}>🖨 {id ? 'Cetak' : 'Print'}</button>
       </div>
       <p className="no-print text-sm text-gray-500">

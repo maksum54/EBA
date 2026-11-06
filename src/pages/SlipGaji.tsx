@@ -24,12 +24,28 @@ export default function SlipGaji() {
   const id = lang === 'id'
   const [q] = useSearchParams()
   const [rows, setRows] = useState<Slip[] | null>(null)
+  const [nomor, setNomor] = useState<Record<number, string>>({})
 
   useEffect(() => {
     let s = supabase.from('penggajian').select('*, karyawan(nama,jabatan,tipe_gaji), proyek(nama,kode_eba)').order('id')
     if (q.get('id')) s = s.eq('id', Number(q.get('id')))
     else if (q.get('periode')) s = s.eq('periode', q.get('periode')!)
-    s.then(({ data }) => setRows((data as Slip[]) || []))
+    s.then(async ({ data }) => {
+      const rs = (data as Slip[]) || []
+      setRows(rs)
+      if (!rs.length) return
+      // Nomor slip otomatis: SG/tahun/bulan/urut — urutan id dalam bulan tanggal bayar
+      const bln = [...new Set(rs.map((r) => r.tanggal.slice(0, 7)))].sort()
+      const akhir = new Date(bln[bln.length - 1] + '-01'); akhir.setMonth(akhir.getMonth() + 1, 0)
+      const { data: semua } = await supabase.from('penggajian').select('id,tanggal')
+        .gte('tanggal', bln[0] + '-01').lte('tanggal', akhir.toLocaleDateString('sv')).order('id')
+      const urut: Record<string, number> = {}, no: Record<number, string> = {}
+      for (const x of (semua as { id: number; tanggal: string }[]) || []) {
+        const b = x.tanggal.slice(0, 7); urut[b] = (urut[b] || 0) + 1
+        no[x.id] = `SG/${b.slice(0, 4)}/${b.slice(5, 7)}/${String(urut[b]).padStart(3, '0')}`
+      }
+      setNomor(no)
+    })
   }, [q])
 
   if (!rows) return <div className="text-gray-500">{id ? 'Memuat…' : 'Loading…'}</div>
@@ -62,6 +78,7 @@ export default function SlipGaji() {
             <div className="my-4 text-center">
               <div className="text-lg font-bold tracking-wide">SLIP GAJI</div>
               <div className="text-sm">{r.periode}</div>
+              {nomor[r.id] && <div className="text-xs text-gray-600">No. {nomor[r.id]}</div>}
             </div>
 
             <table className="mb-4 w-full text-sm">

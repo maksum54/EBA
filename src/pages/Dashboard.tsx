@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import GrafikDashboard from '../components/GrafikDashboard'
+import { eksporExcel } from '../lib/excel'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
@@ -13,6 +15,7 @@ type BB = { akun_kode: string; debit: number; kredit: number }
 
 export default function Dashboard() {
   const nav = useNavigate()
+  const tabelRef = useRef<HTMLTableElement>(null)
   const { t, lang } = useT()
   const [laba, setLaba] = useState<Laba[]>([])
   const [saldo, setSaldo] = useState({ bank: 0, utang: 0, kasbon: 0, piutang: 0 })
@@ -109,6 +112,33 @@ export default function Dashboard() {
           </div>
         ))}
       </div>
+      {bulan.length >= 2 && (() => {
+        // KPI bulan ini vs bulan lalu
+        const ini = bulan[bulan.length - 1], lalu = bulan[bulan.length - 2]
+        const kpi: [string, number, number, boolean][] = [
+          [lang === 'id' ? 'Pendapatan bulan ini' : 'Revenue this month', ini.pend, lalu.pend, true],
+          [lang === 'id' ? 'Biaya bulan ini' : 'Expenses this month', ini.biaya, lalu.biaya, false],
+          [lang === 'id' ? 'Laba bulan ini' : 'Profit this month', ini.pend - ini.biaya, lalu.pend - lalu.biaya, true],
+        ]
+        return (
+          <div className="no-print grid gap-3 sm:grid-cols-3">
+            {kpi.map(([k, v, l, naikBagus]) => {
+              const pct = l !== 0 ? ((v - l) / Math.abs(l)) * 100 : v !== 0 ? 100 : 0
+              const naik = v > l, sama = v === l
+              const bagus = sama ? null : naik === naikBagus
+              return (
+                <div key={k} className="card">
+                  <div className="text-xs font-medium uppercase text-gray-500">{k}</div>
+                  <div className={`mt-1 text-xl font-bold tabular-nums ${v < 0 ? 'text-eba-600' : ''}`}>{rp(v)}</div>
+                  <div className={`mt-0.5 text-xs tabular-nums ${bagus === null ? 'text-gray-500' : bagus ? 'text-green-700 dark:text-green-400' : 'text-eba-600'}`}>
+                    {sama ? '=' : naik ? '▲' : '▼'} {Math.abs(pct).toFixed(0)}% <span className="text-gray-500">{lang === 'id' ? 'vs bulan lalu' : 'vs last month'} ({rp(l)})</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
       <div className="no-print card">
         <div className="mb-3 font-semibold">⚡ {lang === 'id' ? 'Perlu Tindakan' : 'Action Needed'}</div>
         {aksi.length === 0 ? (
@@ -159,6 +189,8 @@ export default function Dashboard() {
         )
       })()}
 
+      <GrafikDashboard />
+
       <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')}${fb ? ' · ' + ({ lunas: 'Sudah diterima', sebagian: 'Sebagian', belum: 'Belum diterima' } as Record<string, string>)[fb] : ''} · ${t('per_tanggal')} ${tgl(today())}`} />
       <div className="card overflow-x-auto p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
@@ -185,10 +217,12 @@ export default function Dashboard() {
               </button>
             ))}
             <button className="ml-2 rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              onClick={() => eksporExcel(tabelRef.current, `Rekap Proyek ${tglFile()}`)}>📊 Excel</button>
+            <button className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
               onClick={() => cetak(`Rekap Proyek ${fs ? (STATUS_PROYEK.find((x) => x.v === fs)?.id || fs) : 'Semua'} ${tglFile()}`)}>🖨 {t('cetak')}</button>
           </div>
         </div>
-        <table className="min-w-full">
+        <table ref={tabelRef} className="min-w-full">
           <thead><tr>
             <th className="th">{t('proyek')}</th><th className="th">{t('status')}</th>
             <th className="th text-right">{t('nilai_kontrak')}</th><th className="th text-right">{t('pendapatan')}</th>
