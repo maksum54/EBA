@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
 import { rp, tgl, today } from '../lib/format'
@@ -12,6 +12,7 @@ type Laba = { id: number; kode_eba: string | null; kode_lpse: string | null; nam
 type BB = { akun_kode: string; debit: number; kredit: number }
 
 export default function Dashboard() {
+  const nav = useNavigate()
   const { t, lang } = useT()
   const [laba, setLaba] = useState<Laba[]>([])
   const [saldo, setSaldo] = useState({ bank: 0, utang: 0, kasbon: 0, piutang: 0 })
@@ -196,7 +197,7 @@ export default function Dashboard() {
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={7}>{t('kosong')}</td></tr>}
             {tampil.map((p) => (
-              <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
+              <tr key={p.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" onClick={() => nav(`/proyek/${p.id}`)}>
                 <td className="td">
                   <Link to={`/proyek/${p.id}`} className="font-medium text-eba-600 hover:underline">{p.kode_eba || p.kode_lpse}</Link>
                   <div className="text-xs text-gray-500">{p.nama}</div>
