@@ -70,12 +70,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     (async () => {
-      const [l, bb, tm] = await Promise.all([
+      const [l, bb, tm, tglm] = await Promise.all([
         supabase.from('v_proyek_laba').select('*').order('id', { ascending: false }),
         supabase.from('v_buku_besar').select('akun_kode,debit,kredit').in('akun_kode', ['1100', '1300', '2100']),
         supabase.from('termin').select('nilai_bersih,status').neq('status', 'diterima'),
+        supabase.from('proyek').select('id,tgl_mulai'),
       ])
       setLaba((l.data as Laba[]) || [])
+      setMulai(Object.fromEntries(((tglm.data as { id: number; tgl_mulai: string | null }[]) || []).map((x) => [x.id, x.tgl_mulai || ''])))
       const s = (kode: string, sign: 1 | -1) => ((bb.data as BB[]) || [])
         .filter((r) => r.akun_kode === kode).reduce((a, r) => a + sign * (Number(r.debit) - Number(r.kredit)), 0)
       setSaldo({
@@ -98,7 +100,12 @@ export default function Dashboard() {
     const dpp = Number(p.nilai_kontrak) / 1.11, d = Number(p.pendapatan)
     return d <= 0 ? 'belum' : d >= dpp - 1 ? 'lunas' : 'sebagian'
   }
-  const perStatus = fs ? laba.filter((p) => p.status === fs) : laba
+  // Filter periode: proyek yang tanggal mulainya dalam N bulan terakhir (termasuk bulan ini)
+  const [mulai, setMulai] = useState<Record<number, string>>({})
+  const [periode, setPeriode] = useState(0)
+  const batasPeriode = (() => { const d = new Date(); d.setMonth(d.getMonth() - (periode - 1), 1); return d.toLocaleDateString('sv') })()
+  const labaP = periode ? laba.filter((p) => (mulai[p.id] || '') >= batasPeriode) : laba
+  const perStatus = fs ? labaP.filter((p) => p.status === fs) : labaP
   const tersaring = fb ? perStatus.filter((p) => stBayar(p) === fb) : perStatus
   // Urutkan kolom: klik ▲/▼ di judul kolom (klik lagi untuk membalik, ketiga kali kembali normal)
   const [urut, setUrut] = useState<{ k: string; d: 1 | -1 } | null>(null)
@@ -218,13 +225,13 @@ export default function Dashboard() {
 
       <GrafikDashboard />
 
-      <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')}${fb ? ' · ' + ({ lunas: 'Sudah diterima', sebagian: 'Sebagian', belum: 'Belum diterima' } as Record<string, string>)[fb] : ''} · ${t('per_tanggal')} ${tgl(today())}`} />
+      <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')}${fb ? ' · ' + ({ lunas: 'Sudah diterima', sebagian: 'Sebagian', belum: 'Belum diterima' } as Record<string, string>)[fb] : ''}${periode ? ' · ' + (periode === 1 ? 'Bulan ini' : periode + ' bulan terakhir') : ''} · ${t('per_tanggal')} ${tgl(today())}`} />
       <div className="card overflow-x-auto p-0">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <span className="font-semibold">{t('laba_proyek')}</span>
           <div className="no-print flex flex-wrap gap-1 text-sm">
             {[{ v: '', id: 'Semua', en: 'All' }, ...STATUS_PROYEK].map((o) => {
-              const n = o.v ? laba.filter((p) => p.status === o.v).length : laba.length
+              const n = o.v ? labaP.filter((p) => p.status === o.v).length : labaP.length
               return (
                 <button key={o.v} onClick={() => pilihFs(o.v)}
                   className={`rounded-full border px-3 py-1 transition ${fs === o.v
@@ -234,6 +241,13 @@ export default function Dashboard() {
                 </button>
               )
             })}
+            <span className="mx-1 self-center text-gray-300">|</span>
+            <select className="input w-auto rounded-full py-1 text-sm" value={periode} onChange={(e) => setPeriode(Number(e.target.value))} title={lang === 'id' ? 'Berdasarkan tanggal mulai proyek' : 'By project start date'}>
+              <option value={0}>{lang === 'id' ? '📅 Semua waktu' : '📅 All time'}</option>
+              {[1, 2, 3, 4, 5, 6, 9, 12, 18, 24].map((n) => (
+                <option key={n} value={n}>{n === 1 ? (lang === 'id' ? 'Bulan ini' : 'This month') : `${n} ${lang === 'id' ? 'bulan terakhir' : 'months'}`}</option>
+              ))}
+            </select>
             <span className="mx-1 self-center text-gray-300">|</span>
             {([['', lang === 'id' ? 'Semua bayar' : 'All'], ['lunas', lang === 'id' ? '🟢 Sudah diterima' : '🟢 Received'], ['sebagian', lang === 'id' ? '🟡 Sebagian' : '🟡 Partial'], ['belum', lang === 'id' ? '🔴 Belum diterima' : '🔴 Not received']] as const).map(([v, l]) => (
               <button key={v} onClick={() => setFb(v)}
