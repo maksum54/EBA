@@ -99,7 +99,34 @@ export default function Dashboard() {
     return d <= 0 ? 'belum' : d >= dpp - 1 ? 'lunas' : 'sebagian'
   }
   const perStatus = fs ? laba.filter((p) => p.status === fs) : laba
-  const tampil = fb ? perStatus.filter((p) => stBayar(p) === fb) : perStatus
+  const tersaring = fb ? perStatus.filter((p) => stBayar(p) === fb) : perStatus
+  // Urutkan kolom: klik ▲/▼ di judul kolom (klik lagi untuk membalik, ketiga kali kembali normal)
+  const [urut, setUrut] = useState<{ k: string; d: 1 | -1 } | null>(null)
+  const nilaiUrut: Record<string, (p: Laba) => number | string> = {
+    proyek: (p) => p.kode_eba || p.kode_lpse || '', status: (p) => p.status,
+    kontrak: (p) => Number(p.nilai_kontrak), pend: (p) => Number(p.pendapatan), biaya: (p) => Number(p.biaya),
+    laba: (p) => Number(p.laba), margin: (p) => (p.pendapatan > 0 ? p.laba / p.pendapatan : -Infinity),
+    bersih: (p) => Number(p.nilai_kontrak) / 1.11, proyeksi: (p) => Number(p.nilai_kontrak) / 1.11 - Number(p.biaya),
+  }
+  const tampil = !urut ? tersaring : [...tersaring].sort((a, b) => {
+    const f = nilaiUrut[urut.k], x = f(a), y = f(b)
+    return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'id', { numeric: true })) * urut.d
+  })
+  const Th = ({ k, kanan, title, children }: { k: string; kanan?: boolean; title?: string; children: React.ReactNode }) => {
+    const aktif = urut?.k === k
+    const klik = (d: 1 | -1) => setUrut(aktif && urut?.d === d ? null : { k, d })
+    return (
+      <th className={`th ${kanan ? 'text-right' : ''}`} title={title}>
+        <span className={`inline-flex items-center gap-1 ${kanan ? 'flex-row-reverse' : ''}`}>
+          <span>{children}</span>
+          <span className="inline-flex flex-col leading-none text-[10px]">
+            <button type="button" onClick={() => klik(1)} className={aktif && urut?.d === 1 ? 'text-eba-600' : 'text-gray-400 hover:text-gray-700'} title="Urut naik">▲</button>
+            <button type="button" onClick={() => klik(-1)} className={aktif && urut?.d === -1 ? 'text-eba-600' : 'text-gray-400 hover:text-gray-700'} title="Urut turun">▼</button>
+          </span>
+        </span>
+      </th>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -224,11 +251,11 @@ export default function Dashboard() {
         </div>
         <table ref={tabelRef} className="min-w-full">
           <thead><tr>
-            <th className="th">{t('proyek')}</th><th className="th">{t('status')}</th>
-            <th className="th text-right">{t('nilai_kontrak')}</th><th className="th text-right">{t('pendapatan')}</th>
-            <th className="th text-right">{t('biaya')}</th><th className="th text-right">{t('laba')}</th><th className="th text-right">{t('margin')}</th>
-            <th className="th text-right" title="Nilai kontrak ÷ 1,11">{lang === 'id' ? 'Nilai Bersih (−PPN)' : 'Net Value (−VAT)'}</th>
-            <th className="th text-right" title="Nilai bersih − biaya">{lang === 'id' ? 'Proyeksi Laba' : 'Projected Profit'}</th>
+            <Th k="proyek">{t('proyek')}</Th><Th k="status">{t('status')}</Th>
+            <Th k="kontrak" kanan>{t('nilai_kontrak')}</Th><Th k="pend" kanan>{t('pendapatan')}</Th>
+            <Th k="biaya" kanan>{t('biaya')}</Th><Th k="laba" kanan>{t('laba')}</Th><Th k="margin" kanan>{t('margin')}</Th>
+            <Th k="bersih" kanan title="Nilai kontrak ÷ 1,11">{lang === 'id' ? 'Nilai Bersih (−PPN)' : 'Net Value (−VAT)'}</Th>
+            <Th k="proyeksi" kanan title="Nilai bersih − biaya">{lang === 'id' ? 'Proyeksi Laba' : 'Projected Profit'}</Th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={9}>{t('kosong')}</td></tr>}
