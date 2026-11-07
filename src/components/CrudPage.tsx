@@ -112,7 +112,11 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
   const remove = async (id: number) => {
     if (!confirm(t('yakin_hapus'))) return
     const { error } = await supabase.from(table).delete().eq('id', id)
-    if (error) setErr(error.message)
+    if (error) {
+      // 23503 = data ini masih dipakai di tabel lain (gaji, jurnal, pembelian, dll.)
+      const m = error.code === '23503' ? error.message.match(/on table "(\w+)"$/) : null
+      setErr(m ? `Tidak bisa dihapus: data ini masih dipakai di "${m[1]}". Hapus/pindahkan data tersebut dulu, atau ubah status menjadi Batal/Selesai.` : error.message)
+    }
     segarkan(table)
     load()
   }
