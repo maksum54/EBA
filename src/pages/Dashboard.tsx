@@ -126,7 +126,7 @@ export default function Dashboard() {
       <th className={`th ${kanan ? 'text-right' : ''}`} title={title}>
         <span className={`inline-flex items-center gap-1 ${kanan ? 'flex-row-reverse' : ''}`}>
           <span>{children}</span>
-          <span className="inline-flex flex-col leading-none text-[10px]">
+          <span className="no-print inline-flex flex-col leading-none text-[10px]">
             <button type="button" onClick={() => klik(1)} className={aktif && urut?.d === 1 ? 'text-eba-600' : 'text-gray-400 hover:text-gray-700'} title="Urut naik">▲</button>
             <button type="button" onClick={() => klik(-1)} className={aktif && urut?.d === -1 ? 'text-eba-600' : 'text-gray-400 hover:text-gray-700'} title="Urut turun">▼</button>
           </span>
@@ -227,7 +227,7 @@ export default function Dashboard() {
 
       <Kop judul={t('laba_proyek')} sub={`${fs ? STATUS_PROYEK.find((x) => x.v === fs)?.[lang] : t('semua_status')}${fb ? ' · ' + ({ lunas: 'Sudah diterima', sebagian: 'Sebagian', belum: 'Belum diterima' } as Record<string, string>)[fb] : ''}${periode ? ' · ' + (periode === 1 ? 'Bulan ini' : periode + ' bulan terakhir') : ''} · ${t('per_tanggal')} ${tgl(today())}`} />
       <div className="card overflow-x-auto p-0">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+        <div className="no-print flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
           <span className="font-semibold">{t('laba_proyek')}</span>
           <div className="no-print flex flex-wrap gap-1 text-sm">
             {[{ v: '', id: 'Semua', en: 'All' }, ...STATUS_PROYEK].map((o) => {
@@ -263,7 +263,7 @@ export default function Dashboard() {
               onClick={() => cetak(`Rekap Proyek ${fs ? (STATUS_PROYEK.find((x) => x.v === fs)?.id || fs) : 'Semua'} ${tglFile()}`)}>🖨 {t('cetak')}</button>
           </div>
         </div>
-        <table ref={tabelRef} className="min-w-full">
+        <table ref={tabelRef} className="cetak-rapat min-w-full">
           <thead><tr>
             <Th k="proyek">{t('proyek')}</Th><Th k="status">{t('status')}</Th>
             <Th k="kontrak" kanan>{t('nilai_kontrak')}</Th><Th k="pend" kanan>{t('pendapatan')}</Th>

@@ -27,6 +27,13 @@ html.dark { background: #030712; }
   .overflow-x-auto, .overflow-hidden, .overflow-y-auto { overflow: visible !important; }
   table { width: 100% !important; }
   td, th { padding-top: 4px !important; padding-bottom: 4px !important; }
+  /* tabel rekap rapat (dashboard) */
+  .cetak-rapat td, .cetak-rapat th { padding: 3px 5px !important; font-size: 9.5px !important; line-height: 1.3 !important; vertical-align: top; }
+  .cetak-rapat th { font-size: 8.5px !important; letter-spacing: 0 !important; border-bottom: 1.5px solid #333 !important; }
+  .cetak-rapat td .text-xs { font-size: 8.5px !important; }
+  .cetak-rapat td.tabular-nums, .cetak-rapat th.text-right, .cetak-rapat td.text-right { white-space: nowrap; }
+  .cetak-rapat tbody tr:nth-child(even) { background: #f6f6f6 !important; }
+  .cetak-rapat tfoot td { border-top: 1.5px solid #333 !important; font-weight: 700; }
   thead { display: table-header-group; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
