@@ -7,6 +7,8 @@ import type { Opt } from '../lib/options'
 import FotoNota, { thumb } from './FotoNota'
 import { MoneyInput, QtyInput } from './NumInput'
 import { ambilRef, segarkan } from '../lib/cache'
+import { FileSpreadsheet, Plus } from 'lucide-react'
+import { Badge, SkeletonBaris, konfirmasi, toast } from './UI'
 
 /**
  * Halaman tabel + form generik. Setiap modul (proyek, termin, pembelian, dst.)
@@ -103,20 +105,22 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     const { error } = id
       ? await supabase.from(table).update(payload).eq('id', id)
       : await supabase.from(table).insert(payload)
-    if (error) { setErr(error.message); return }
+    if (error) { setErr(error.message); toast(error.message, 'gagal'); return }
+    toast(lang === 'id' ? (id ? 'Perubahan tersimpan' : 'Data baru tersimpan') : 'Saved')
     segarkan(table)
     setForm(null)
     load()
   }
 
   const remove = async (id: number) => {
-    if (!confirm(t('yakin_hapus'))) return
+    if (!await konfirmasi(t('yakin_hapus'))) return
     const { error } = await supabase.from(table).delete().eq('id', id)
     if (error) {
       // 23503 = data ini masih dipakai di tabel lain (gaji, jurnal, pembelian, dll.)
       const m = error.code === '23503' ? error.message.match(/on table "(\w+)"$/) : null
-      setErr(m ? `Tidak bisa dihapus: data ini masih dipakai di "${m[1]}". Hapus/pindahkan data tersebut dulu, atau ubah status menjadi Batal/Selesai.` : error.message)
-    }
+      const pesan = m ? `Tidak bisa dihapus: data ini masih dipakai di "${m[1]}". Hapus/pindahkan data tersebut dulu, atau ubah status menjadi Batal/Selesai.` : error.message
+      setErr(pesan); toast(pesan, 'gagal')
+    } else toast(lang === 'id' ? 'Data dihapus' : 'Deleted')
     segarkan(table)
     load()
   }
@@ -132,7 +136,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     switch (f.type) {
       case 'money': return rp(v as number)
       case 'date': return tgl(v as string)
-      case 'select': return optLabel(f, v)
+      case 'select': return f.key === 'status' && ['tender', 'berjalan', 'selesai', 'batal'].includes(String(v)) ? <Badge status={String(v)} label={optLabel(f, v)} /> : optLabel(f, v)
       case 'ref': return refLabel(f, v)
       case 'bool': return v ? '✓' : '—'
       case 'photos': return <div className="flex gap-1">{((v as string[]) || []).slice(0, 3).map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={thumb(u)} alt="nota" className="h-8 w-8 rounded object-cover" /></a>)}</div>
@@ -167,8 +171,8 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{title}</h1>
-        <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), title)}>📊 Excel</button>
-        <button className="btn-primary" onClick={() => setForm(blank())}>+ {t('tambah')}</button>
+        <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), title)}><FileSpreadsheet className="h-4 w-4 text-green-700" /> Excel</button>
+        <button className="btn-primary" onClick={() => setForm(blank())}><Plus className="h-4 w-4" /> {t('tambah')}</button>
       </div>
       {hint && <p className="text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
       {(fField || search || ddFields.length > 0) && (
@@ -200,7 +204,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
       {err && <div className="rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{err}</div>}
 
       {form && (
-        <div className="card space-y-3">
+        <div className="card animate-masuk space-y-3 border-eba-200 ring-1 ring-eba-500/10">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {fields.filter((f) => !f.readOnly && !(fixed && f.key in fixed)).map((f) => (
               <label key={f.key} className="block text-sm">
@@ -242,7 +246,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
           <thead><tr>{cols.map((f) => <th key={f.key} className={'th ' + (f.type === 'money' ? 'text-right' : f.type === 'bool' ? 'text-center' : '')}>{t(f.key)}</th>)}<th className="th" /></tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
-              <tr><td className="td text-gray-500" colSpan={cols.length + 1}>{t('memuat')}</td></tr>
+              <SkeletonBaris kolom={cols.length + 1} />
             ) : tampil.length === 0 ? (
               <tr><td className="td text-gray-500" colSpan={cols.length + 1}>{t('kosong')}</td></tr>
             ) : tampil.map((r) => (

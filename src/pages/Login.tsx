@@ -29,11 +29,28 @@ export default function Login() {
   }
 
   return (
-    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-gray-50 px-4 dark:bg-gray-950">
-      {/* latar: dua lingkaran merah lembut yang bergerak pelan */}
-      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 animate-blob rounded-full bg-eba-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 animate-blob rounded-full bg-eba-500/10 blur-3xl [animation-delay:-6s]" />
+    <div className="flex min-h-[100dvh] bg-gray-50 dark:bg-gray-950">
+      {/* panel kiri (layar lebar): identitas perusahaan dengan gradasi merah EBA */}
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-eba-700 via-eba-600 to-eba-900 p-12 text-white lg:flex">
+        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 animate-blob rounded-full bg-white/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 -left-20 h-96 w-96 animate-blob rounded-full bg-black/20 blur-3xl [animation-delay:-6s]" />
+        {/* pola garis halus ala gambar teknik */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(white_1px,transparent_1px),linear-gradient(90deg,white_1px,transparent_1px)] [background-size:32px_32px]" />
+        <div className="relative animate-masuk">
+          <div className="inline-flex rounded-xl bg-white px-4 py-2 shadow-lg"><img src="/logo-eba.png" alt="EBA" className="h-10" /></div>
+        </div>
+        <div className="relative animate-masuk [animation-delay:150ms]">
+          <h1 className="text-4xl font-bold leading-tight">PT. EBA Karya Mandiri</h1>
+          <p className="mt-2 text-lg text-white/80">Engineering · Build · Contractor</p>
+          <p className="mt-8 max-w-md text-sm leading-relaxed text-white/70">
+            {lang === 'id' ? 'Sistem keuangan internal: proyek, pembelian, penggajian, dan laporan dalam satu tempat.' : 'Internal finance system: projects, purchasing, payroll and reports in one place.'}
+          </p>
+        </div>
+        <div className="relative text-xs text-white/50">© {new Date().getFullYear()} PT. EBA Karya Mandiri</div>
+      </div>
 
+      <div className="relative flex flex-1 items-center justify-center overflow-hidden px-4">
+      <div className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 animate-blob rounded-full bg-eba-500/10 blur-3xl lg:hidden" />
       <form onSubmit={submit} className="relative w-full max-w-[300px] animate-masuk space-y-3">
         <div className="mb-6 text-center">
           <img src="/logo-eba.png" alt="EBA Karya Mandiri" className="mx-auto h-12 animate-masuk [animation-delay:80ms]" />
@@ -59,6 +76,7 @@ export default function Login() {
 
         <p className="animate-masuk pt-4 text-center text-[11px] text-gray-400 [animation-delay:420ms]">PT. EBA Karya Mandiri</p>
       </form>
+      </div>
     </div>
   )
 }

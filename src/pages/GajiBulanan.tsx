@@ -1,3 +1,5 @@
+import { Printer } from 'lucide-react'
+import { konfirmasi, toast } from '../components/UI'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
@@ -34,6 +36,9 @@ export default function GajiBulanan() {
   const [sudah, setSudah] = useState<Record<number, Tersimpan>>({})
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  // tampilkan juga sebagai toast di pojok kanan bawah
+  useEffect(() => { if (msg) toast(msg) }, [msg])
+  useEffect(() => { if (err) toast(err, 'gagal') }, [err])
   const [busy, setBusy] = useState(false)
   const [muatUlang, setMuatUlang] = useState(0)
 
@@ -130,14 +135,14 @@ export default function GajiBulanan() {
 
   const hapusGaji = async (k: Kar) => {
     const s = sudah[k.id]
-    if (!s?.id || !confirm(t('yakin_hapus'))) return
+    if (!s?.id || !await konfirmasi(t('yakin_hapus'))) return
     const { error } = await supabase.from('penggajian').delete().eq('id', s.id)
     if (error) { setErr(error.message); return }
     setMuatUlang((n) => n + 1)
   }
   const hapusSemua = async () => {
     const ids = Object.values(sudah).map((x) => x.id).filter(Boolean) as number[]
-    if (!ids.length || !confirm(t('gm_konfirmasi_hapus_semua').replace('{n}', String(ids.length)))) return
+    if (!ids.length || !await konfirmasi(t('gm_konfirmasi_hapus_semua').replace('{n}', String(ids.length)))) return
     const { error } = await supabase.from('penggajian').delete().in('id', ids)
     if (error) { setErr(error.message); return }
     setMsg(`${ids.length} ${t('gm_terhapus')}`); setMuatUlang((n) => n + 1)
@@ -155,7 +160,7 @@ export default function GajiBulanan() {
       <div className="no-print space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-bold">{t('gaji_bulanan')}</h1>
-          {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Bulanan ${bulanFile}`)}>🖨 {t('cetak')}</button>}
+          {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Bulanan ${bulanFile}`)}><Printer className="h-4 w-4" /> {t('cetak')}</button>}
         </div>
 
         <div className="card flex flex-wrap items-end gap-4">

@@ -1,3 +1,4 @@
+import { Printer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -59,7 +60,7 @@ export default function SlipGaji() {
     <div className="space-y-4">
       <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <Link to="/gaji" className="text-sm text-gray-500 hover:underline">← {id ? 'Riwayat Penggajian' : 'Payroll history'}</Link>
-        <button className="btn-primary" onClick={() => cetak(namaFile)}>🖨 {id ? 'Cetak / Simpan PDF' : 'Print / Save PDF'} ({rows.length})</button>
+        <button className="btn-primary" onClick={() => cetak(namaFile)}><Printer className="h-4 w-4" /> {id ? 'Cetak / Simpan PDF' : 'Print / Save PDF'} ({rows.length})</button>
       </div>
 
       {rows.map((r, i) => {

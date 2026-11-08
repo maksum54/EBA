@@ -1,3 +1,4 @@
+import { konfirmasi, toast } from '../components/UI'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
@@ -32,6 +33,7 @@ export default function Pembelian() {
   const [items, setItems] = useState<Item[]>([])
   const [bayarNota, setBayarNota] = useState<Nota | null>(null)
   const [err, setErr] = useState('')
+  useEffect(() => { if (err) toast(err, 'gagal') }, [err])
   const [busy, setBusy] = useState(false)
   // Filter daftar nota
   const [fStatus, setFStatus] = useState('')
@@ -104,11 +106,11 @@ export default function Pembelian() {
     if (!form.id && awal > 0) {
       await supabase.from('pembayaran_supplier').insert({ pembelian_id: id, tanggal: form.tanggal, jumlah: awal, catatan: awal >= total ? 'Lunas' : 'DP' })
     }
-    setBusy(false); setForm(null); load()
+    setBusy(false); setForm(null); load(); toast('Pembelian tersimpan')
   }
 
   const hapus = async (id: number) => {
-    if (!confirm(t('yakin_hapus'))) return
+    if (!await konfirmasi(t('yakin_hapus'))) return
     const { error } = await supabase.from('pembelian').delete().eq('id', id)
     if (error) setErr(error.message)
     load()
@@ -295,6 +297,7 @@ function PanelBayar({ nota, onClose }: { nota: Nota; onClose: () => void }) {
   const [jumlah, setJumlah] = useState<number | string>(0)
   const [catatan, setCatatan] = useState('')
   const [err, setErr] = useState('')
+  useEffect(() => { if (err) toast(err, 'gagal') }, [err])
 
   const load = useCallback(async () => {
     const { data } = await supabase.from('pembayaran_supplier').select('*').eq('pembelian_id', nota.id).order('tanggal')
@@ -315,7 +318,7 @@ function PanelBayar({ nota, onClose }: { nota: Nota; onClose: () => void }) {
     setJumlah(0); setCatatan(''); load()
   }
   const hapus = async (id: number) => {
-    if (!confirm(t('yakin_hapus'))) return
+    if (!await konfirmasi(t('yakin_hapus'))) return
     await supabase.from('pembayaran_supplier').delete().eq('id', id); load()
   }
 

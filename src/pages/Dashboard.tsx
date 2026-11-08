@@ -1,3 +1,5 @@
+import { Angka, Badge, SkeletonBaris, Sparkline } from '../components/UI'
+import { FileSpreadsheet, Printer } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import GrafikDashboard from '../components/GrafikDashboard'
 import { eksporExcel } from '../lib/excel'
@@ -18,6 +20,7 @@ export default function Dashboard() {
   const tabelRef = useRef<HTMLTableElement>(null)
   const { t, lang } = useT()
   const [laba, setLaba] = useState<Laba[]>([])
+  const [siap, setSiap] = useState(false)
   const [saldo, setSaldo] = useState({ bank: 0, utang: 0, kasbon: 0, piutang: 0 })
   // Filter status proyek (disimpan supaya tetap saat halaman dibuka lagi)
   const [fs, setFs] = useState<string>(() => { try { return localStorage.getItem('eba-filter-proyek') || '' } catch { return '' } })
@@ -76,7 +79,7 @@ export default function Dashboard() {
         supabase.from('termin').select('nilai_bersih,status').neq('status', 'diterima'),
         supabase.from('proyek').select('id,tgl_mulai'),
       ])
-      setLaba((l.data as Laba[]) || [])
+      setLaba((l.data as Laba[]) || []); setSiap(true)
       setMulai(Object.fromEntries(((tglm.data as { id: number; tgl_mulai: string | null }[]) || []).map((x) => [x.id, x.tgl_mulai || ''])))
       const s = (kode: string, sign: 1 | -1) => ((bb.data as BB[]) || [])
         .filter((r) => r.akun_kode === kode).reduce((a, r) => a + sign * (Number(r.debit) - Number(r.kredit)), 0)
@@ -140,9 +143,9 @@ export default function Dashboard() {
       <h1 className="no-print text-xl font-bold">{t('dashboard')}</h1>
       <div className="no-print grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {tiles.map(([k, v, c]) => (
-          <div key={k} className="card">
+          <div key={k} className="card card-hover">
             <div className="text-xs font-medium uppercase text-gray-500">{t(k)}</div>
-            <div className={`mt-1 text-xl font-bold tabular-nums ${c}`}>{rp(v)}</div>
+            <div className={`mt-1 text-xl font-bold tabular-nums ${c}`}><Angka nilai={v} /></div>
           </div>
         ))}
       </div>
@@ -156,14 +159,16 @@ export default function Dashboard() {
         ]
         return (
           <div className="no-print grid gap-3 sm:grid-cols-3">
-            {kpi.map(([k, v, l, naikBagus]) => {
+            {kpi.map(([k, v, l, naikBagus], ki) => {
+              const tren = bulan.map((x) => ki === 0 ? x.pend : ki === 1 ? x.biaya : x.pend - x.biaya)
               const pct = l !== 0 ? ((v - l) / Math.abs(l)) * 100 : v !== 0 ? 100 : 0
               const naik = v > l, sama = v === l
               const bagus = sama ? null : naik === naikBagus
               return (
-                <div key={k} className="card">
+                <div key={k} className="card card-hover">
                   <div className="text-xs font-medium uppercase text-gray-500">{k}</div>
-                  <div className={`mt-1 text-xl font-bold tabular-nums ${v < 0 ? 'text-eba-600' : ''}`}>{rp(v)}</div>
+                  <div className={`mt-1 text-xl font-bold tabular-nums ${v < 0 ? 'text-eba-600' : ''}`}><Angka nilai={v} /></div>
+                  <div className="mt-1 text-gray-400"><Sparkline data={tren} warna={ki === 1 ? '#c0302b' : '#16a34a'} /></div>
                   <div className={`mt-0.5 text-xs tabular-nums ${bagus === null ? 'text-gray-500' : bagus ? 'text-green-700 dark:text-green-400' : 'text-eba-600'}`}>
                     {sama ? '=' : naik ? '▲' : '▼'} {Math.abs(pct).toFixed(0)}% <span className="text-gray-500">{lang === 'id' ? 'vs bulan lalu' : 'vs last month'} ({rp(l)})</span>
                   </div>
@@ -257,10 +262,10 @@ export default function Dashboard() {
                 {l} <span className="opacity-70">{v ? perStatus.filter((p) => stBayar(p) === v).length : perStatus.length}</span>
               </button>
             ))}
-            <button className="ml-2 rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-              onClick={() => eksporExcel(tabelRef.current, `Rekap Proyek ${tglFile()}`)}>📊 Excel</button>
-            <button className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
-              onClick={() => cetak(`Rekap Proyek ${fs ? (STATUS_PROYEK.find((x) => x.v === fs)?.id || fs) : 'Semua'} ${tglFile()}`)}>🖨 {t('cetak')}</button>
+            <button className="ml-2 inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              onClick={() => eksporExcel(tabelRef.current, `Rekap Proyek ${tglFile()}`)}><FileSpreadsheet className="h-4 w-4 text-green-700" /> Excel</button>
+            <button className="inline-flex items-center gap-1 rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800"
+              onClick={() => cetak(`Rekap Proyek ${fs ? (STATUS_PROYEK.find((x) => x.v === fs)?.id || fs) : 'Semua'} ${tglFile()}`)}><Printer className="h-4 w-4" /> {t('cetak')}</button>
           </div>
         </div>
         <table ref={tabelRef} className="cetak-rapat min-w-full">
@@ -272,14 +277,14 @@ export default function Dashboard() {
             <Th k="proyeksi" kanan title="Nilai bersih − biaya">{lang === 'id' ? 'Proyeksi Laba' : 'Projected Profit'}</Th>
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-            {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={9}>{t('kosong')}</td></tr>}
+            {!siap ? <SkeletonBaris kolom={9} /> : tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={9}>{t('kosong')}</td></tr>}
             {tampil.map((p) => (
               <tr key={p.id} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50" onClick={() => nav(`/proyek/${p.id}`)}>
                 <td className="td">
                   <Link to={`/proyek/${p.id}`} className="font-medium text-eba-600 hover:underline">{p.kode_eba || p.kode_lpse}</Link>
                   <div className="text-xs text-gray-500">{p.nama}</div>
                 </td>
-                <td className="td">{STATUS_PROYEK.find((s) => s.v === p.status)?.[lang]}</td>
+                <td className="td"><Badge status={p.status} label={STATUS_PROYEK.find((s) => s.v === p.status)?.[lang] || p.status} /></td>
                 <td className="td text-right tabular-nums">{rp(p.nilai_kontrak)}</td>
                 <td className="td text-right tabular-nums">{rp(p.pendapatan)}</td>
                 <td className="td text-right tabular-nums">{rp(p.biaya)}</td>

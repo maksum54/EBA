@@ -1,3 +1,5 @@
+import { Printer } from 'lucide-react'
+import { konfirmasi, toast } from '../components/UI'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
@@ -63,6 +65,9 @@ export default function GajiMingguan() {
   const [sudah, setSudah] = useState<Record<number, Tersimpan>>({})
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
+  // tampilkan juga sebagai toast di pojok kanan bawah
+  useEffect(() => { if (msg) toast(msg) }, [msg])
+  useEffect(() => { if (err) toast(err, 'gagal') }, [err])
   const [busy, setBusy] = useState(false)
   const [muatUlang, setMuatUlang] = useState(0) // naikkan untuk membuang perubahan & ambil ulang dari database
 
@@ -138,7 +143,7 @@ export default function GajiMingguan() {
   // Hapus SEMUA gaji yang sudah tersimpan di minggu ini (mis. salah minggu / salah proyek)
   const hapusSemua = async () => {
     const ids = Object.values(sudah).map((x) => x.id).filter(Boolean) as number[]
-    if (!ids.length || !confirm(t('gm_konfirmasi_hapus_semua').replace('{n}', String(ids.length)))) return
+    if (!ids.length || !await konfirmasi(t('gm_konfirmasi_hapus_semua').replace('{n}', String(ids.length)))) return
     setBusy(true)
     const { error } = await supabase.from('penggajian').delete().in('id', ids)
     setBusy(false)
@@ -148,7 +153,7 @@ export default function GajiMingguan() {
   }
   const hapusGaji = async (k: Kar) => {
     const s = sudah[k.id]
-    if (!s?.id || !confirm(t('yakin_hapus'))) return
+    if (!s?.id || !await konfirmasi(t('yakin_hapus'))) return
     const { error } = await supabase.from('penggajian').delete().eq('id', s.id)
     if (error) { setErr(error.message); return }
     setSudah((x) => { const y = { ...x }; delete y[k.id]; return y })
@@ -194,7 +199,7 @@ export default function GajiMingguan() {
       <div className="no-print space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl font-bold">{t('gaji_mingguan')}</h1>
-          {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Mingguan ${mulai} sd ${selesai}`)}>🖨 {t('cetak')}</button>}
+          {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Mingguan ${mulai} sd ${selesai}`)}><Printer className="h-4 w-4" /> {t('cetak')}</button>}
         </div>
 
         {/* Pilih minggu: tombol ‹ › */}
@@ -299,7 +304,7 @@ export default function GajiMingguan() {
           <div className="flex flex-wrap gap-2">
             {rekap.length > 0 && <button className="btn-ghost text-red-600" disabled={busy} onClick={hapusSemua}>🗑 {t('gm_hapus_semua')}</button>}
             {(berubah.length > 0 || baru.length > 0) && <button className="btn-ghost" disabled={busy} onClick={batal}>↺ {t('gm_batal_ubah')}</button>}
-            {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Mingguan ${mulai} sd ${selesai}`)}>🖨 {t('cetak')}</button>}
+            {rekap.length > 0 && <button className="btn-ghost" onClick={() => cetak(`Gaji Mingguan ${mulai} sd ${selesai}`)}><Printer className="h-4 w-4" /> {t('cetak')}</button>}
             <button className="btn-primary px-5 py-2" disabled={busy} onClick={simpan}>{t('simpan')}</button>
           </div>
         </div>

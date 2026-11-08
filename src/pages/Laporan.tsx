@@ -1,3 +1,4 @@
+import { FileSpreadsheet } from 'lucide-react'
 import { eksporExcel } from '../lib/excel'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
@@ -124,7 +125,7 @@ export default function Laporan() {
         <h1 className="mr-auto text-xl font-bold">{t('laporan')}</h1>
         {tab !== 'neraca' && <label className="text-sm">{t('dari')}<input type="date" className="input" value={dari} onChange={(e) => setDari(e.target.value)} /></label>}
         <label className="text-sm">{tab === 'neraca' ? t('per_tanggal') : t('sampai')}<input type="date" className="input" value={sampai} onChange={(e) => setSampai(e.target.value)} /></label>
-        <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), `${tab === 'neraca' ? 'Neraca' : tab === 'laba_rugi' ? 'Laba Rugi' : 'Buku Besar'} ${dari} sd ${sampai}`)}>📊 Excel</button>
+        <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), `${tab === 'neraca' ? 'Neraca' : tab === 'laba_rugi' ? 'Laba Rugi' : 'Buku Besar'} ${dari} sd ${sampai}`)}><FileSpreadsheet className="h-4 w-4 text-green-700" /> Excel</button>
         <button className="btn-ghost" onClick={() => cetak(tab === 'neraca' ? `Neraca per ${sampai}` : `${tab === 'laba_rugi' ? 'Laba Rugi' + (akunF ? ' ' + ([...pend, ...beb].find((x) => x.kode === akunF)?.nama || akunF) : '') : 'Buku Besar'} ${dari} sd ${sampai}${tab === 'laba_rugi' && rinci ? ' (rinci)' : ''}`)}>{t('cetak')}</button>
       </div>
       <div className="no-print flex flex-wrap items-center gap-2">
