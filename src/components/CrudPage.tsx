@@ -7,7 +7,9 @@ import type { Opt } from '../lib/options'
 import FotoNota, { thumb } from './FotoNota'
 import { MoneyInput, QtyInput } from './NumInput'
 import { ambilRef, segarkan } from '../lib/cache'
-import { FileSpreadsheet, Plus } from 'lucide-react'
+import { FileSpreadsheet, Plus, Printer } from 'lucide-react'
+import Kop from './Kop'
+import { cetak, tglFile } from '../lib/cetak'
 import { Badge, SkeletonBaris, konfirmasi, toast } from './UI'
 
 /**
@@ -197,14 +199,22 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* kop surat + judul, hanya muncul saat dicetak */}
+      <Kop judul={title} sub={[
+        fField && fVal ? optLabel(fField, fVal) : '',
+        ...ddFields.filter((f) => dd[f.key]).map((f) => `${t(f.key)}: ${labelOf(f, f.type === 'ref' ? Number(dd[f.key]) : dd[f.key])}`),
+        cari.trim() ? `"${cari.trim()}"` : '',
+        `${tampil.length} data`, `${lang === 'id' ? 'Per tanggal' : 'As of'} ${tgl(today())}`,
+      ].filter(Boolean).join(' · ')} />
+      <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{title}</h1>
         <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('main table'), title)}><FileSpreadsheet className="h-4 w-4 text-green-700" /> Excel</button>
+        <button className="btn-ghost" onClick={() => cetak(`${title}${fField && fVal ? ' ' + optLabel(fField, fVal) : ''} ${tglFile()}`)}><Printer className="h-4 w-4" /> {lang === 'id' ? 'Cetak / PDF' : 'Print / PDF'}</button>
         <button className="btn-primary" onClick={() => setForm(blank())}><Plus className="h-4 w-4" /> {t('tambah')}</button>
       </div>
-      {hint && <p className="text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
+      {hint && <p className="no-print text-sm text-gray-500 dark:text-gray-400">{hint}</p>}
       {(fField || search || ddFields.length > 0) && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
+        <div className="no-print flex flex-wrap items-center gap-2 text-sm">
           {fField && [{ v: '', id: 'Semua', en: 'All' }, ...(fField.options || [])].map((o) => (
             <button key={o.v} onClick={() => pilihF(o.v)}
               className={`rounded-full border px-3 py-1 transition ${fVal === o.v
@@ -229,10 +239,10 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
           {search && <input className="input ml-auto w-full max-w-xs" placeholder={'🔍 ' + t('cari')} value={cari} onChange={(e) => setCari(e.target.value)} />}
         </div>
       )}
-      {err && <div className="rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{err}</div>}
+      {err && <div className="no-print rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{err}</div>}
 
       {form && (
-        <div className="card animate-masuk space-y-3 border-eba-200 ring-1 ring-eba-500/10">
+        <div className="no-print card animate-masuk space-y-3 border-eba-200 ring-1 ring-eba-500/10">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {fields.filter((f) => !f.readOnly && !(fixed && f.key in fixed)).map((f) => (
               <label key={f.key} className="block text-sm">
@@ -270,12 +280,12 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
       )}
 
       <div className="card overflow-x-auto p-0">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table className="cetak-rapat min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead><tr>{cols.map((f) => (
             <th key={f.key} className={'th ' + (f.type === 'money' ? 'text-right' : f.type === 'bool' ? 'text-center' : '')}>
               <span className={`inline-flex items-center gap-1.5 ${f.type === 'money' ? 'flex-row-reverse' : ''}`}><span>{t(f.key)}</span>{f.type !== 'photos' && panah(f.key)}</span>
             </th>
-          ))}<th className="th" /></tr></thead>
+          ))}<th className="th no-print" /></tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <SkeletonBaris kolom={cols.length + 1} />
@@ -286,7 +296,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
                 {cols.map((f) => (
                   <td key={f.key} className={'td ' + (f.type === 'money' ? 'whitespace-nowrap text-right tabular-nums' : f.type === 'bool' ? 'text-center' : '')}>{show(f, r)}</td>
                 ))}
-                <td className="td whitespace-nowrap text-right">
+                <td className="td no-print whitespace-nowrap text-right">
                   {rowAction?.(r)}
                   <button className="ml-2 text-eba-600 hover:underline" onClick={() => setForm({ ...r })}>{t('ubah')}</button>
                   <button className="ml-2 text-gray-500 hover:text-red-600" onClick={() => remove(r.id)}>{t('hapus')}</button>
@@ -301,7 +311,7 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
                   {f.type === 'money' ? rp(tampil.reduce((a, r) => a + Number(r[f.key] || 0), 0))
                     : i === 0 ? <>{t('total')} <span className="text-xs font-normal text-gray-500">({tampil.length})</span></> : ''}
                 </td>
-              ))}<td className="td" />
+              ))}<td className="td no-print" />
             </tr></tfoot>
           )}
         </table>
