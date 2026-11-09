@@ -156,7 +156,17 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
   const [dd, setDd] = useState<Record<string, string>>({})   // nilai dropdown filter
   const ddFields = filters.map((k) => fields.find((f) => f.key === k)).filter(Boolean) as Field[]
   const labelOf = (f: Field, v: unknown) => f.type === 'ref' ? refLabel(f, v) : f.type === 'select' ? optLabel(f, v) : f.type === 'date' ? tgl(v as string) : String(v ?? '-')
-  const tampil = rows.filter((r) => {
+  // Urutkan per kolom: ▲ naik, ▼ turun, klik lagi untuk kembali ke urutan awal
+  const [urut, setUrut] = useState<{ k: string; d: 1 | -1 } | null>(null)
+  const nilaiUrut = (f: Field, r: Row): number | string => {
+    const v = r[f.key]
+    if (f.type === 'money' || f.type === 'number') return Number(v ?? 0)
+    if (f.type === 'ref') return refLabel(f, v)
+    if (f.type === 'select') return optLabel(f, v)
+    if (f.type === 'bool') return v ? 1 : 0
+    return String(v ?? '')
+  }
+  const tersaring = rows.filter((r) => {
     if (fField && fVal && r[fField.key] !== fVal) return false
     for (const f of ddFields) if (dd[f.key] && String(r[f.key] ?? '') !== dd[f.key]) return false
     if (!cari.trim()) return true
@@ -166,6 +176,24 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
       return String(v ?? '').toLowerCase().includes(q)
     })
   })
+  const fUrut = urut ? cols.find((f) => f.key === urut.k) : undefined
+  const tampil = !fUrut || !urut ? tersaring : [...tersaring].sort((a, b) => {
+    const x = nilaiUrut(fUrut, a), y = nilaiUrut(fUrut, b)
+    if (x === '' && y !== '') return 1          // yang kosong selalu di bawah
+    if (y === '' && x !== '') return -1
+    return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'id', { numeric: true })) * urut.d
+  })
+  const panah = (k: string) => {
+    const aktif = urut?.k === k
+    const klik = (d: 1 | -1) => setUrut(aktif && urut?.d === d ? null : { k, d })
+    const c = (d: 1 | -1) => aktif && urut?.d === d ? 'text-eba-600' : 'text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300'
+    return (
+      <span className="no-print inline-flex flex-col text-[9px] leading-[9px]">
+        <button type="button" onClick={() => klik(1)} className={c(1)} title={lang === 'id' ? 'Urut naik' : 'Ascending'}>▲</button>
+        <button type="button" onClick={() => klik(-1)} className={c(-1)} title={lang === 'id' ? 'Urut turun' : 'Descending'}>▼</button>
+      </span>
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -243,7 +271,11 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
 
       <div className="card overflow-x-auto p-0">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead><tr>{cols.map((f) => <th key={f.key} className={'th ' + (f.type === 'money' ? 'text-right' : f.type === 'bool' ? 'text-center' : '')}>{t(f.key)}</th>)}<th className="th" /></tr></thead>
+          <thead><tr>{cols.map((f) => (
+            <th key={f.key} className={'th ' + (f.type === 'money' ? 'text-right' : f.type === 'bool' ? 'text-center' : '')}>
+              <span className={`inline-flex items-center gap-1.5 ${f.type === 'money' ? 'flex-row-reverse' : ''}`}><span>{t(f.key)}</span>{f.type !== 'photos' && panah(f.key)}</span>
+            </th>
+          ))}<th className="th" /></tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {loading ? (
               <SkeletonBaris kolom={cols.length + 1} />
