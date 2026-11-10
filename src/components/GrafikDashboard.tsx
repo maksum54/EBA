@@ -1,3 +1,4 @@
+import { semua, urutBB } from '../lib/semua'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -32,7 +33,7 @@ export default function GrafikDashboard() {
     Promise.all([
       supabase.from('v_proyek_laba').select('id,kode_eba,nama,status,nilai_kontrak,pendapatan,biaya'),
       supabase.from('proyek').select('id,tgl_mulai,tgl_selesai'),
-      supabase.from('v_buku_besar').select('proyek_id,akun_kode,akun_nama,debit,kredit').eq('tipe', 'beban'),
+      semua(() => urutBB(supabase.from('v_buku_besar').select('proyek_id,akun_kode,akun_nama,debit,kredit').eq('tipe', 'beban'))),
     ]).then(([a, b, c]) => {
       setPro((a.data as P[]) || [])
       setTglP(Object.fromEntries(((b.data as Pr[]) || []).map((x) => [x.id, x])))

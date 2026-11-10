@@ -1,3 +1,4 @@
+import { semua, urutBB } from '../lib/semua'
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -32,7 +33,7 @@ export default function ProyekDetail() {
     (async () => {
       const [a, b, c] = await Promise.all([
         supabase.from('v_proyek_laba').select('*').eq('id', pid).single(),
-        supabase.from('v_buku_besar').select('*').eq('proyek_id', pid).in('tipe', ['pendapatan', 'beban']).order('tanggal'),
+        semua(() => urutBB(supabase.from('v_buku_besar').select('*').eq('proyek_id', pid).in('tipe', ['pendapatan', 'beban']))),
         supabase.from('rab_proyek').select('akun_kode,nilai').eq('proyek_id', pid),
       ])
       setRab(Object.fromEntries(((c.data as { akun_kode: string; nilai: number }[]) || []).map((r) => [r.akun_kode, Number(r.nilai)])))

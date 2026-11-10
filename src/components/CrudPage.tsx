@@ -1,3 +1,4 @@
+import { semua } from '../lib/semua'
 import { eksporExcel } from '../lib/excel'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
@@ -56,8 +57,13 @@ export default function CrudPage({ table, title, hint, fields, orderBy = 'id', f
 
   const load = useCallback(async () => {
     setLoading(true)
-    let q = supabase.from(table).select('*').order(orderBy, { ascending: false })
-    for (const [k, v] of Object.entries(JSON.parse(fixedKey))) q = q.eq(k, v as never)
+    const buat = () => {
+      let q = supabase.from(table).select('*').order(orderBy, { ascending: false })
+      if (orderBy !== 'id') q = q.order('id', { ascending: false })
+      for (const [k, v] of Object.entries(JSON.parse(fixedKey))) q = q.eq(k, v as never)
+      return q
+    }
+    const q = semua<Row>(buat)
     // Ambil data utama + semua dropdown relasi SEKALIGUS (paralel), dropdown dari cache.
     const refFields = fields.filter((f) => f.type === 'ref')
     const [main, ...refData] = await Promise.all([

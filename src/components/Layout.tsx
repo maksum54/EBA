@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
+import Pengaman from './Pengaman'
+import { SkeletonKartu } from './UI'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { BarChart3, Building2, ClipboardList, CreditCard, FileText, HandCoins, LayoutDashboard, LogOut, Menu, Moon, Receipt, Search, ShoppingCart, Sun, Truck, Users, Wallet, Wrench, BookOpen, CalendarDays, Briefcase } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -65,7 +67,7 @@ export default function Layout({ email }: { email: string }) {
             </div>
           ))}
         </nav>
-        <main className="min-w-0 flex-1 p-4 md:p-6"><div key={loc.pathname} className="halaman"><Outlet /></div></main>
+        <main className="min-w-0 flex-1 p-4 md:p-6"><Pengaman key={loc.pathname}><Suspense fallback={<SkeletonKartu />}><div className="halaman"><Outlet /></div></Suspense></Pengaman></main>
       </div>
     </div>
   )

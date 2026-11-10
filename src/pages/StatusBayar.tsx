@@ -1,3 +1,5 @@
+import { useUrut } from '../components/UI'
+import { semua } from '../lib/semua'
 import { FileSpreadsheet, Printer } from 'lucide-react'
 import { eksporExcel } from '../lib/excel'
 import { Fragment, useCallback, useEffect, useState } from 'react'
@@ -37,7 +39,7 @@ export default function StatusBayar() {
   const load = useCallback(async () => {
     const [a, b] = await Promise.all([
       supabase.from('proyek').select('id,kode_eba,nama,nilai_kontrak,status,catatan,tgl_mulai').in('status', ['berjalan', 'selesai']).order('tgl_mulai', { ascending: false }),
-      supabase.from('termin').select('proyek_id,nilai_dpp,ppn,nilai_bersih,status'),
+      semua(() => supabase.from('termin').select('proyek_id,nilai_dpp,ppn,nilai_bersih,status').order('id')),
     ])
     setProyek((a.data as P[]) || [])
     setTermin((b.data as Tm[]) || [])
@@ -55,11 +57,15 @@ export default function StatusBayar() {
     const ardana = (p.catatan || '').toUpperCase().includes('ARDANA')
     return { ...p, kontrak, terima, bersih, sisa, st, ardana }
   })
-  const tampil = data.filter((x) =>
+  const { urutkan, panah } = useUrut<(typeof data)[number]>({
+    proyek: (x) => x.kode_eba || '', kontrak: (x) => x.kontrak, ppn: (x) => x.kontrak - x.kontrak / 1.11, harus: (x) => x.kontrak / 1.11,
+    terima: (x) => x.bersih, sisa: (x) => x.sisa, status: (x) => ({ belum: 0, sebagian: 1, lunas: 2 })[x.st],
+  })
+  const tampil = urutkan(data.filter((x) =>
     (!fs || x.st === fs) &&
     (!bln || (x.tgl_mulai || '').slice(0, 7) === bln) &&
     (!penyedia || (penyedia === 'ardana' ? x.ardana : !x.ardana)) &&
-    (!cari.trim() || `${x.kode_eba} ${x.nama} ${x.catatan}`.toLowerCase().includes(cari.toLowerCase())))
+    (!cari.trim() || `${x.kode_eba} ${x.nama} ${x.catatan}`.toLowerCase().includes(cari.toLowerCase()))))
 
   const buka = (x: (typeof data)[number]) => {
     setErr('')
@@ -128,13 +134,13 @@ export default function StatusBayar() {
       <div className="card overflow-x-auto p-0">
         <table className="min-w-full">
           <thead><tr>
-            <th className="th">{id ? 'Proyek' : 'Project'}</th>
-            <th className="th text-right">{id ? 'Nilai Kontrak' : 'Contract'}</th>
-            <th className="th text-right">PPN 11%<div className="text-[10px] font-normal normal-case">{id ? 'dipotong LEMIGAS' : 'withheld'}</div></th>
-            <th className="th text-right">{id ? 'Harus Diterima' : 'Net due'}<div className="text-[10px] font-normal normal-case">{id ? 'kontrak − PPN' : 'contract − VAT'}</div></th>
-            <th className="th text-right">{id ? 'Sudah Diterima' : 'Received'}</th>
-            <th className="th text-right">{id ? 'Sisa' : 'Outstanding'}</th>
-            <th className="th">Status</th><th className="th no-print" />
+            <th className="th">{id ? 'Proyek' : 'Project'}{panah('proyek')}</th>
+            <th className="th text-right">{id ? 'Nilai Kontrak' : 'Contract'}{panah('kontrak')}</th>
+            <th className="th text-right">PPN 11%{panah('ppn')}<div className="text-[10px] font-normal normal-case">{id ? 'dipotong LEMIGAS' : 'withheld'}</div></th>
+            <th className="th text-right">{id ? 'Harus Diterima' : 'Net due'}{panah('harus')}<div className="text-[10px] font-normal normal-case">{id ? 'kontrak − PPN' : 'contract − VAT'}</div></th>
+            <th className="th text-right">{id ? 'Sudah Diterima' : 'Received'}{panah('terima')}</th>
+            <th className="th text-right">{id ? 'Sisa' : 'Outstanding'}{panah('sisa')}</th>
+            <th className="th">Status{panah('status')}</th><th className="th no-print" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={8}>{id ? 'Tidak ada data.' : 'No data.'}</td></tr>}

@@ -1,3 +1,5 @@
+import { useUrut } from '../components/UI'
+import { semua } from '../lib/semua'
 import { konfirmasi, toast } from '../components/UI'
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
@@ -43,7 +45,7 @@ export default function Pembelian() {
 
   const load = useCallback(async () => {
     const [n, p, s] = await Promise.all([
-      supabase.from('v_pembelian').select('*').order('tanggal', { ascending: false }).order('id', { ascending: false }),
+      semua(() => supabase.from('v_pembelian').select('*').order('tanggal', { ascending: false }).order('id', { ascending: false })),
       supabase.from('proyek').select('id,nama,kode_eba,kode_lpse').order('id', { ascending: false }),
       supabase.from('supplier').select('id,nama').order('nama'),
     ])
@@ -123,7 +125,11 @@ export default function Pembelian() {
     return <span className={`rounded px-1.5 py-0.5 text-xs font-medium ${c}`}>{t('st_' + n.status)}</span>
   }
 
-  const tampil = rows.filter((n) => {
+  const { urutkan, panah } = useUrut<(typeof rows)[number]>({
+    tanggal: (n) => n.tanggal || '', nota: (n) => n.no_nota || '', proyek: (n) => namaProyek(n.proyek_id), supplier: (n) => namaSupplier(n.supplier_id),
+    uraian: (n) => n.uraian || '', total: (n) => Number(n.jumlah), sisa: (n) => Math.max(0, Number(n.sisa)), status: (n) => n.status,
+  })
+  const tersaring = rows.filter((n) => {
     if (fStatus && n.status !== fStatus) return false
     if (fProyek === 'kantor' && n.proyek_id) return false
     if (fProyek && fProyek !== 'kantor' && n.proyek_id !== Number(fProyek)) return false
@@ -131,6 +137,7 @@ export default function Pembelian() {
     const q = cari.trim().toLowerCase()
     return !q || [n.no_nota, n.uraian, namaSupplier(n.supplier_id), namaProyek(n.proyek_id)].some((x) => String(x ?? '').toLowerCase().includes(q))
   })
+  const tampil = urutkan(tersaring)
 
   return (
     <div className="space-y-4">
@@ -236,9 +243,9 @@ export default function Pembelian() {
       <div className="card overflow-x-auto p-0">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead><tr>
-            <th className="th">{t('tanggal')}</th><th className="th">{t('no_nota')}</th><th className="th">{t('proyek_id')}</th>
-            <th className="th">{t('supplier_id')}</th><th className="th">{t('uraian')}</th><th className="th text-right">{t('total')}</th>
-            <th className="th text-right">{t('sisa')}</th><th className="th">{t('status')}</th><th className="th">{t('foto')}</th><th className="th" />
+            <th className="th">{t('tanggal')}{panah('tanggal')}</th><th className="th">{t('no_nota')}{panah('nota')}</th><th className="th">{t('proyek_id')}{panah('proyek')}</th>
+            <th className="th">{t('supplier_id')}{panah('supplier')}</th><th className="th">{t('uraian')}{panah('uraian')}</th><th className="th text-right">{t('total')}{panah('total')}</th>
+            <th className="th text-right">{t('sisa')}{panah('sisa')}</th><th className="th">{t('status')}{panah('status')}</th><th className="th">{t('foto')}</th><th className="th" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={10}>{t('kosong')}</td></tr>}

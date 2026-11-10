@@ -1,3 +1,4 @@
+import { semua, urutBB } from '../lib/semua'
 import { FileSpreadsheet } from 'lucide-react'
 import { eksporExcel } from '../lib/excel'
 import { Fragment, useEffect, useMemo, useState } from 'react'
@@ -27,7 +28,7 @@ export default function Laporan() {
   }, [])
 
   useEffect(() => {
-    supabase.from('v_buku_besar').select('*').lte('tanggal', sampai).order('tanggal').order('jurnal_id')
+    semua(() => urutBB(supabase.from('v_buku_besar').select('*').lte('tanggal', sampai)))
       .then(({ data }) => setAll((data as BB[]) || []))
   }, [sampai])
 

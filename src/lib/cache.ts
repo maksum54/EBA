@@ -1,3 +1,4 @@
+import { semua } from './semua'
 import { supabase } from './supabase'
 
 /**
@@ -13,9 +14,12 @@ export function ambilRef(table: string, filter?: Record<string, unknown>): Promi
   const key = table + JSON.stringify(filter || {})
   const hit = store.get(key)
   if (hit && Date.now() - hit.at < TTL) return hit.p
-  let q = supabase.from(table).select('*').order('id', { ascending: false })
-  for (const [k, v] of Object.entries(filter || {})) q = q.eq(k, v as never)
-  const p = Promise.resolve(q).then(({ data }) => (data as Row[]) || [])
+  const buat = () => {
+    let q = supabase.from(table).select('*').order('id', { ascending: false })
+    for (const [k, v] of Object.entries(filter || {})) q = q.eq(k, v as never)
+    return q
+  }
+  const p = semua<Row>(buat).then(({ data }) => data)
   store.set(key, { at: Date.now(), p })
   return p
 }

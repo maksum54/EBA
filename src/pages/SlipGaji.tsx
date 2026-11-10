@@ -1,3 +1,4 @@
+import { semua as ambilSemua } from '../lib/semua'
 import { Printer } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -38,8 +39,8 @@ export default function SlipGaji() {
       // Nomor slip otomatis: SG/tahun/bulan/urut — urutan id dalam bulan tanggal bayar
       const bln = [...new Set(rs.map((r) => r.tanggal.slice(0, 7)))].sort()
       const akhir = new Date(bln[bln.length - 1] + '-01'); akhir.setMonth(akhir.getMonth() + 1, 0)
-      const { data: semua } = await supabase.from('penggajian').select('id,tanggal')
-        .gte('tanggal', bln[0] + '-01').lte('tanggal', akhir.toLocaleDateString('sv')).order('id')
+      const { data: semua } = await ambilSemua(() => supabase.from('penggajian').select('id,tanggal')
+        .gte('tanggal', bln[0] + '-01').lte('tanggal', akhir.toLocaleDateString('sv')).order('id'))
       const urut: Record<string, number> = {}, no: Record<number, string> = {}
       for (const x of (semua as { id: number; tanggal: string }[]) || []) {
         const b = x.tanggal.slice(0, 7); urut[b] = (urut[b] || 0) + 1

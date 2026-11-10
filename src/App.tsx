@@ -1,21 +1,23 @@
-import { useEffect, useState } from 'react'
+import { lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase, supabaseReady } from './lib/supabase'
 import { useT } from './lib/i18n'
 import Layout from './components/Layout'
-import StatusBayar from './pages/StatusBayar'
-import SlipGaji from './pages/SlipGaji'
 import Login, { SandiBaru } from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import ProyekDetail from './pages/ProyekDetail'
-import Laporan from './pages/Laporan'
-import Pembelian from './pages/Pembelian'
-import GajiMingguan from './pages/GajiMingguan'
-import GajiBulanan from './pages/GajiBulanan'
-import {
-  BiayaPage, GajiPage, KaryawanPage, KasbonPage, KlienPage, ManualPage, ProyekPage, RealisasiPage, SupplierPage, TerminPage,
-} from './pages/modules'
+// Tiap halaman dimuat saat dibuka saja, supaya pembukaan pertama ringan.
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const StatusBayar = lazy(() => import('./pages/StatusBayar'))
+const SlipGaji = lazy(() => import('./pages/SlipGaji'))
+const ProyekDetail = lazy(() => import('./pages/ProyekDetail'))
+const Laporan = lazy(() => import('./pages/Laporan'))
+const Pembelian = lazy(() => import('./pages/Pembelian'))
+const GajiMingguan = lazy(() => import('./pages/GajiMingguan'))
+const GajiBulanan = lazy(() => import('./pages/GajiBulanan'))
+const modul = (n: 'BiayaPage' | 'GajiPage' | 'KaryawanPage' | 'KasbonPage' | 'KlienPage' | 'ManualPage' | 'ProyekPage' | 'RealisasiPage' | 'SupplierPage' | 'TerminPage') =>
+  lazy(() => import('./pages/modules').then((m) => ({ default: m[n] })))
+const BiayaPage = modul('BiayaPage'), GajiPage = modul('GajiPage'), KaryawanPage = modul('KaryawanPage'), KasbonPage = modul('KasbonPage'), KlienPage = modul('KlienPage')
+const ManualPage = modul('ManualPage'), ProyekPage = modul('ProyekPage'), RealisasiPage = modul('RealisasiPage'), SupplierPage = modul('SupplierPage'), TerminPage = modul('TerminPage')
 
 export default function App() {
   const { t } = useT()

@@ -225,3 +225,30 @@ export function CariCepat() {
     </div>
   )
 }
+
+// ---------- Urut kolom tabel (▲ naik / ▼ turun; klik lagi = urutan awal) ----------
+export function useUrut<T>(nilai: Record<string, (r: T) => number | string>) {
+  const [urut, setUrut] = useState<{ k: string; d: 1 | -1 } | null>(null)
+  const urutkan = (xs: T[]): T[] => {
+    if (!urut || !nilai[urut.k]) return xs
+    const f = nilai[urut.k]
+    return [...xs].sort((a, b) => {
+      const x = f(a), y = f(b)
+      if (x === '' && y !== '') return 1      // yang kosong selalu di bawah
+      if (y === '' && x !== '') return -1
+      return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'id', { numeric: true })) * urut.d
+    })
+  }
+  const panah = (k: string) => {
+    const aktif = urut?.k === k
+    const klik = (d: 1 | -1) => setUrut(aktif && urut?.d === d ? null : { k, d })
+    const c = (d: 1 | -1) => aktif && urut?.d === d ? 'text-eba-600' : 'text-gray-300 hover:text-gray-600 dark:text-gray-600 dark:hover:text-gray-300'
+    return (
+      <span className="no-print ml-1 inline-flex flex-col align-middle text-[9px] leading-[9px]">
+        <button type="button" onClick={() => klik(1)} className={c(1)} title="Urut naik">▲</button>
+        <button type="button" onClick={() => klik(-1)} className={c(-1)} title="Urut turun">▼</button>
+      </span>
+    )
+  }
+  return { urutkan, panah }
+}

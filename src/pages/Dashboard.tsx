@@ -1,3 +1,4 @@
+import { semua, urutBB } from '../lib/semua'
 import { Angka, Badge, SkeletonBaris, Sparkline } from '../components/UI'
 import { FileSpreadsheet, Printer } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -39,7 +40,7 @@ export default function Dashboard() {
         supabase.from('termin').select('nilai_bersih,tgl_tagih').eq('status', 'ditagih'),
         supabase.from('termin').select('nilai_bersih').eq('status', 'rencana'),
         supabase.from('kasbon').select('nominal,tanggal').eq('status', 'terbuka').lte('tanggal', geser(7)),
-        supabase.from('v_buku_besar').select('tanggal,tipe,debit,kredit').in('tipe', ['pendapatan', 'beban']).gte('tanggal', awal6),
+        semua(() => urutBB(supabase.from('v_buku_besar').select('tanggal,tipe,debit,kredit').in('tipe', ['pendapatan', 'beban']).gte('tanggal', awal6))),
         supabase.from('rab_proyek').select('proyek_id,nilai'),
         supabase.from('v_proyek_laba').select('id,biaya'),
       ])
@@ -75,7 +76,7 @@ export default function Dashboard() {
     (async () => {
       const [l, bb, tm, tglm] = await Promise.all([
         supabase.from('v_proyek_laba').select('*').order('id', { ascending: false }),
-        supabase.from('v_buku_besar').select('akun_kode,debit,kredit').in('akun_kode', ['1100', '1300', '2100']),
+        semua(() => urutBB(supabase.from('v_buku_besar').select('akun_kode,debit,kredit').in('akun_kode', ['1100', '1300', '2100']))),
         supabase.from('termin').select('nilai_bersih,status').neq('status', 'diterima'),
         supabase.from('proyek').select('id,tgl_mulai'),
       ])
