@@ -28,6 +28,9 @@ export default function GrafikDashboard() {
   const [tglP, setTglP] = useState<Record<number, Pr>>({})
   const [beban, setBeban] = useState<BB[]>([])
   const [pilih, setPilih] = useState<number | ''>('')
+  // Filter status untuk ketiga grafik: semua / berjalan / selesai
+  const [fst, setFst] = useState<'' | 'berjalan' | 'selesai'>('')
+  const idStatus = new Set(pro.filter((p) => !fst || p.status === fst).map((p) => p.id))
 
   useEffect(() => {
     Promise.all([
@@ -42,7 +45,7 @@ export default function GrafikDashboard() {
   }, [])
 
   // 1. Biaya vs Nilai Bersih (proyek berjalan), paling kritis di atas
-  const progres = pro.filter((p) => p.status === 'berjalan').map((p) => {
+  const progres = pro.filter((p) => p.status === (fst || 'berjalan')).map((p) => {
     const nb = Number(p.nilai_kontrak) / 1.11, b = Number(p.biaya)
     return { id: p.id, nama: p.kode_eba || String(p.id), judul: p.nama, nb, b, pct: nb > 0 ? (b / nb) * 100 : 0 }
   }).sort((x, y) => y.pct - x.pct)
@@ -51,6 +54,7 @@ export default function GrafikDashboard() {
   const kom: Record<string, number> = {}
   for (const r of beban) {
     if (pilih && r.proyek_id !== pilih) continue
+    if (!pilih && fst && !(r.proyek_id && idStatus.has(r.proyek_id))) continue
     if (r.akun_kode === '5900') continue
     const k = `${r.akun_kode} ${r.akun_nama.replace(/^Beban /, '')}`
     kom[k] = (kom[k] || 0) + Number(r.debit) - Number(r.kredit)
@@ -65,7 +69,7 @@ export default function GrafikDashboard() {
     { k: id ? '30–60 hari' : '30–60 days', v: 0, n: 0, w: '#f59e0b' },
     { k: id ? '> 60 hari' : '> 60 days', v: 0, n: 0, w: '#c8102e' },
   ]
-  for (const p of pro.filter((x) => x.status === 'berjalan' || x.status === 'selesai')) {
+  for (const p of pro.filter((x) => fst ? x.status === fst : x.status === 'berjalan' || x.status === 'selesai')) {
     const sisa = Number(p.nilai_kontrak) / 1.11 - Number(p.pendapatan)
     if (sisa < 1) continue
     const t = tglP[p.id]; const d = t?.tgl_selesai || t?.tgl_mulai
@@ -77,8 +81,17 @@ export default function GrafikDashboard() {
 
   return (
     <div className="no-print grid gap-4 lg:grid-cols-2">
+      <div className="flex flex-wrap items-center gap-1 text-sm lg:col-span-2">
+        <span className="mr-1 text-gray-500">{id ? 'Grafik untuk proyek:' : 'Charts for projects:'}</span>
+        {([['', id ? 'Semua' : 'All'], ['berjalan', id ? 'Berjalan' : 'Running'], ['selesai', id ? 'Selesai' : 'Completed']] as const).map(([v, l]) => (
+          <button key={v} onClick={() => { setFst(v); setPilih('') }}
+            className={`rounded-full border px-3 py-1 transition ${fst === v ? 'border-eba-600 bg-eba-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
+            {l} <span className="opacity-70">{v ? pro.filter((p) => p.status === v).length : pro.filter((p) => p.status === 'berjalan' || p.status === 'selesai').length}</span>
+          </button>
+        ))}
+      </div>
       <div className="card lg:col-span-2">
-        <div className="mb-1 font-semibold">{id ? 'Progres Biaya vs Nilai Bersih (proyek berjalan)' : 'Cost vs Net Value (running projects)'}</div>
+        <div className="mb-1 font-semibold">{id ? `Progres Biaya vs Nilai Bersih (proyek ${fst === 'selesai' ? 'selesai' : 'berjalan'})` : `Cost vs Net Value (${fst === 'selesai' ? 'completed' : 'running'} projects)`}</div>
         <div className="mb-2 text-xs text-gray-500">{id ? 'Nilai Bersih = kontrak ÷ 1,11. Hijau < 70%, kuning 70–90%, merah ≥ 90%. Klik bar untuk buka proyek.' : 'Net value = contract ÷ 1.11. Green < 70%, amber 70–90%, red ≥ 90%. Click a bar to open.'}</div>
         {progres.length === 0 ? <div className="text-sm text-gray-500">-</div> : (
           <ResponsiveContainer width="100%" height={Math.max(160, progres.length * 34 + 30)}>
@@ -100,7 +113,7 @@ export default function GrafikDashboard() {
           <div className="font-semibold">{id ? 'Komposisi Biaya' : 'Cost Breakdown'}</div>
           <select className="input w-auto max-w-[16rem] py-1 text-sm" value={pilih} onChange={(e) => setPilih(e.target.value ? Number(e.target.value) : '')}>
             <option value="">{id ? 'Semua proyek' : 'All projects'}</option>
-            {pro.map((p) => <option key={p.id} value={p.id}>{p.kode_eba} · {p.nama.slice(0, 40)}</option>)}
+            {pro.filter((p) => idStatus.has(p.id)).map((p) => <option key={p.id} value={p.id}>{p.kode_eba} · {p.nama.slice(0, 40)}</option>)}
           </select>
         </div>
         {totDonut === 0 ? <div className="text-sm text-gray-500">-</div> : (
