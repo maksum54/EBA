@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { Bar, BarChart, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
-import { rp } from '../lib/format'
+import { isSensor, rp } from '../lib/format'
 
 /**
  * Tiga grafik dashboard (hanya membaca data):
@@ -17,7 +17,7 @@ type Pr = { id: number; tgl_mulai: string | null; tgl_selesai: string | null }
 type BB = { proyek_id: number | null; akun_kode: string; akun_nama: string; debit: number; kredit: number }
 
 const WARNA = ['#c8102e', '#2563eb', '#f59e0b', '#10b981', '#8b5cf6', '#6b7280', '#ec4899']
-const juta = (v: number) => (Math.abs(v) >= 1e6 ? (v / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 }) + ' jt' : Math.round(v).toLocaleString('id-ID'))
+const juta = (v: number) => isSensor() ? '•••' : (Math.abs(v) >= 1e6 ? (v / 1e6).toLocaleString('id-ID', { maximumFractionDigits: 1 }) + ' jt' : Math.round(v).toLocaleString('id-ID'))
 const uang = (v: unknown) => rp(Math.round(Number(v)))
 
 export default function GrafikDashboard() {

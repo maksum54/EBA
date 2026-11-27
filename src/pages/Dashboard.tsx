@@ -7,7 +7,7 @@ import { eksporExcel } from '../lib/excel'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useT } from '../lib/i18n'
-import { rp, tgl, today } from '../lib/format'
+import { isSensor, rp, tgl, today } from '../lib/format'
 import { STATUS_PROYEK } from '../lib/options'
 import Kop from '../components/Kop'
 import { cetak, tglFile } from '../lib/cetak'
@@ -220,7 +220,7 @@ export default function Dashboard() {
                   </div>
                   <div className="mt-1 text-[11px] text-gray-500">{nm(x.b)}</div>
                   <div className={`text-[10px] tabular-nums ${x.pend - x.biaya < 0 ? 'text-eba-600' : 'text-green-700 dark:text-green-400'}`}>
-                    {x.pend || x.biaya ? (x.pend - x.biaya >= 0 ? '+' : '−') + (Math.abs(x.pend - x.biaya) / 1e6).toFixed(1) + 'jt' : ''}
+                    {x.pend || x.biaya ? (x.pend - x.biaya >= 0 ? '+' : '−') + (isSensor() ? '•••' : (Math.abs(x.pend - x.biaya) / 1e6).toFixed(1)) + 'jt' : ''}
                   </div>
                 </div>
               ))}
