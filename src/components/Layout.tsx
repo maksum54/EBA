@@ -1,8 +1,9 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { isSensor, setSensor } from '../lib/format'
 import Pengaman from './Pengaman'
 import { SkeletonKartu } from './UI'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { BarChart3, Building2, ClipboardList, CreditCard, FileText, HandCoins, LayoutDashboard, LogOut, Menu, Moon, Receipt, Search, ShoppingCart, Sun, Truck, Users, Wallet, Wrench, BookOpen, CalendarDays, Briefcase } from 'lucide-react'
+import { BarChart3, Building2, ClipboardList, CreditCard, FileText, HandCoins, LayoutDashboard, LogOut, Menu, Eye, EyeOff, Moon, Receipt, Search, ShoppingCart, Sun, Truck, Users, Wallet, Wrench, BookOpen, CalendarDays, Briefcase } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { CariCepat, ProgresRute, UIHost } from './UI'
 import { supabase } from '../lib/supabase'
@@ -27,6 +28,12 @@ export default function Layout({ email }: { email: string }) {
   const [theme, setTheme] = useState(getTheme())
   const [open, setOpen] = useState(false)
   const loc = useLocation()
+  const [sensor, setSensorState] = useState(isSensor())
+  useEffect(() => {
+    const f = () => setSensorState(isSensor())
+    window.addEventListener('ganti-sensor', f)
+    return () => window.removeEventListener('ganti-sensor', f)
+  }, [])
   const toggleTheme = () => { const n = theme === 'dark' ? 'light' : 'dark'; setTheme(n); applyTheme(n) }
 
   return (
@@ -45,6 +52,12 @@ export default function Layout({ email }: { email: string }) {
           <button className="btn-ghost sm:hidden" onClick={() => window.dispatchEvent(new Event('buka-cari'))} aria-label="cari"><Search className="h-4 w-4" /></button>
           <span className="hidden text-gray-500 lg:inline">{email}</span>
           <button className="btn-ghost" onClick={() => setLang(lang === 'id' ? 'en' : 'id')}>{lang === 'id' ? 'EN' : 'ID'}</button>
+          <button className={`btn-ghost ${sensor ? 'text-eba-700 dark:text-eba-100' : ''}`} onClick={() => setSensor(!sensor)}
+            title={sensor ? (lang === 'id' ? 'Tampilkan nominal' : 'Show amounts') : (lang === 'id' ? 'Sensor nominal' : 'Hide amounts')}
+            aria-pressed={sensor}>
+            {sensor ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            <span className="hidden sm:inline">{sensor ? (lang === 'id' ? 'Tampilkan' : 'Show') : (lang === 'id' ? 'Sensor' : 'Hide')}</span>
+          </button>
           <button className="btn-ghost" onClick={toggleTheme}>{theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}</button>
           <button className="btn-ghost" onClick={() => supabase.auth.signOut()}><LogOut className="h-4 w-4" /><span className="hidden sm:inline">{t('logout')}</span></button>
         </div>
@@ -67,7 +80,7 @@ export default function Layout({ email }: { email: string }) {
             </div>
           ))}
         </nav>
-        <main className="min-w-0 flex-1 p-4 md:p-6"><Pengaman key={loc.pathname}><Suspense fallback={<SkeletonKartu />}><div className="halaman"><Outlet /></div></Suspense></Pengaman></main>
+        <main className="min-w-0 flex-1 p-4 md:p-6"><Pengaman key={loc.pathname + (sensor ? ':s' : '')}><Suspense fallback={<SkeletonKartu />}><div className="halaman"><Outlet /></div></Suspense></Pengaman></main>
       </div>
     </div>
   )
