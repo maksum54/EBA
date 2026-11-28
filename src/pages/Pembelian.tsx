@@ -130,7 +130,7 @@ export default function Pembelian() {
     uraian: (n) => n.uraian || '', total: (n) => Number(n.jumlah), sisa: (n) => Math.max(0, Number(n.sisa)), status: (n) => n.status,
   })
   const tersaring = rows.filter((n) => {
-    if (fStatus && n.status !== fStatus) return false
+    if (fStatus && (fStatus === 'outstanding' ? n.status === 'lunas' : n.status !== fStatus)) return false
     if (fProyek === 'kantor' && n.proyek_id) return false
     if (fProyek && fProyek !== 'kantor' && n.proyek_id !== Number(fProyek)) return false
     if (fKat && n.kategori !== fKat) return false
@@ -217,12 +217,12 @@ export default function Pembelian() {
 
       {/* Filter */}
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        {[{ v: '', k: 'semua' }, { v: 'belum', k: 'st_belum' }, { v: 'dicicil', k: 'st_dicicil' }, { v: 'lunas', k: 'st_lunas' }].map((o) => (
+        {[{ v: '', k: 'semua' }, { v: 'belum', k: 'st_belum' }, { v: 'dicicil', k: 'st_dicicil' }, { v: 'lunas', k: 'st_lunas' }, { v: 'outstanding', k: 'st_belum_lunas' }].map((o) => (
           <button key={o.v} onClick={() => setFStatus(o.v)}
             className={`rounded-full border px-3 py-1 transition ${fStatus === o.v
               ? 'border-eba-600 bg-eba-600 text-white'
               : 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800'}`}>
-            {t(o.k)} <span className="opacity-70">{o.v ? rows.filter((n) => n.status === o.v).length : rows.length}</span>
+            {t(o.k)} <span className="opacity-70">{o.v === 'outstanding' ? rows.filter((n) => n.status !== 'lunas').length : o.v ? rows.filter((n) => n.status === o.v).length : rows.length}</span>
           </button>
         ))}
         <select className="input w-auto" value={fProyek} onChange={(e) => setFProyek(e.target.value)}>

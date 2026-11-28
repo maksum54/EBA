@@ -106,6 +106,7 @@ const dict: Record<string, [string, string]> = {
   st_belum: ['Belum Bayar', 'Unpaid'],
   st_dicicil: ['Dicicil', 'Partially Paid'],
   st_lunas: ['Lunas', 'Paid'],
+  st_belum_lunas: ['Belum Lunas', 'Unpaid + Partial'],
   lewat_tempo: ['Lewat jatuh tempo', 'Overdue'],
   tutup: ['Tutup', 'Close'],
   gaji_mingguan: ['Gaji Mingguan (Harian)', 'Weekly Pay (Daily Workers)'],
