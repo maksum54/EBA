@@ -6,7 +6,7 @@
 export function eksporExcel(tabel: HTMLTableElement | null, nama: string) {
   if (!tabel) return
   const t = tabel.cloneNode(true) as HTMLTableElement
-  t.querySelectorAll('button, input, select, svg').forEach((e) => e.remove())
+  t.querySelectorAll('.no-print, button, input, select, svg, img').forEach((e) => e.remove())
   t.querySelectorAll('td, th').forEach((c) => {
     const s = (c.textContent || '').replace(/\s+/g, ' ').trim()
     const m = s.match(/^(-?)\s*Rp\s*(-?)([\d.]+)(,\d+)?$/)

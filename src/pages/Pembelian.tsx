@@ -8,6 +8,10 @@ import { rp, tgl, today } from '../lib/format'
 import { KATEGORI_BELI } from '../lib/options'
 import FotoNota, { thumb } from '../components/FotoNota'
 import { MoneyInput, QtyInput } from '../components/NumInput'
+import { eksporExcel } from '../lib/excel'
+import { cetak, tglFile } from '../lib/cetak'
+import Kop from '../components/Kop'
+import { FileSpreadsheet, Printer } from 'lucide-react'
 
 /**
  * Pembelian: satu nota = header + banyak barang (volume × harga satuan).
@@ -138,18 +142,31 @@ export default function Pembelian() {
     return !q || [n.no_nota, n.uraian, namaSupplier(n.supplier_id), namaProyek(n.proyek_id)].some((x) => String(x ?? '').toLowerCase().includes(q))
   })
   const tampil = urutkan(tersaring)
+  const stLabel: Record<string, string> = { belum: 'st_belum', dicicil: 'st_dicicil', lunas: 'st_lunas', outstanding: 'st_belum_lunas' }
+  const subJudul = [
+    fStatus ? t(stLabel[fStatus]) : '',
+    fProyek ? (fProyek === 'kantor' ? t('kantor_singkat') : namaProyek(Number(fProyek))) : '',
+    fKat ? (KATEGORI_BELI.find((o) => o.v === fKat)?.[lang] || fKat) : '',
+    cari.trim() ? `"${cari.trim()}"` : '',
+  ].filter(Boolean)
+  const namaFile = `${t('pembelian')}${subJudul.length ? ' ' + subJudul.join(' ') : ''} ${tglFile()}`
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <Kop judul={t('pembelian')} sub={[...subJudul, `${tampil.length} nota`, `${lang === 'id' ? 'Per tanggal' : 'As of'} ${tgl(today())}`].join(' · ')} />
+      <div className="no-print flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-bold">{t('pembelian')}</h1>
-        <button className="btn-primary" onClick={baru}>+ {t('tambah')}</button>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-ghost" onClick={() => eksporExcel(document.querySelector<HTMLTableElement>('#tabel-pembelian'), namaFile)}><FileSpreadsheet className="h-4 w-4 text-green-700" /> Excel</button>
+          <button className="btn-ghost" onClick={() => cetak(namaFile)}><Printer className="h-4 w-4" /> {lang === 'id' ? 'Cetak / PDF' : 'Print / PDF'}</button>
+          <button className="btn-primary" onClick={baru}>+ {t('tambah')}</button>
+        </div>
       </div>
-      <p className="text-sm text-gray-500 dark:text-gray-400">{t('hint_pembelian')}</p>
-      {err && <div className="rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{err}</div>}
+      <p className="no-print text-sm text-gray-500 dark:text-gray-400">{t('hint_pembelian')}</p>
+      {err && <div className="no-print rounded-md bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{err}</div>}
 
       {form && (
-        <div className="card space-y-4">
+        <div className="no-print card space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <L k="tanggal"><input type="date" className="input" value={form.tanggal || ''} onChange={(e) => setForm({ ...form, tanggal: e.target.value })} /></L>
             <L k="no_nota"><input className="input" value={form.no_nota || ''} onChange={(e) => setForm({ ...form, no_nota: e.target.value })} /></L>
@@ -216,7 +233,7 @@ export default function Pembelian() {
       )}
 
       {/* Filter */}
-      <div className="flex flex-wrap items-center gap-2 text-sm">
+      <div className="no-print flex flex-wrap items-center gap-2 text-sm">
         {[{ v: '', k: 'semua' }, { v: 'belum', k: 'st_belum' }, { v: 'dicicil', k: 'st_dicicil' }, { v: 'lunas', k: 'st_lunas' }, { v: 'outstanding', k: 'st_belum_lunas' }].map((o) => (
           <button key={o.v} onClick={() => setFStatus(o.v)}
             className={`rounded-full border px-3 py-1 transition ${fStatus === o.v
@@ -237,15 +254,15 @@ export default function Pembelian() {
         <input className="input ml-auto w-full max-w-xs" placeholder={'🔍 ' + t('cari_nota')} value={cari} onChange={(e) => setCari(e.target.value)} />
       </div>
 
-      {bayarNota && <PanelBayar nota={bayarNota} onClose={() => { setBayarNota(null); load() }} />}
+      <div className="no-print">{bayarNota && <PanelBayar nota={bayarNota} onClose={() => { setBayarNota(null); load() }} />}</div>
 
       {/* Daftar nota: kartu di HP, tabel di layar lebar */}
       <div className="card overflow-x-auto p-0">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table id="tabel-pembelian" className="cetak-rapat min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead><tr>
             <th className="th">{t('tanggal')}{panah('tanggal')}</th><th className="th">{t('no_nota')}{panah('nota')}</th><th className="th">{t('proyek_id')}{panah('proyek')}</th>
             <th className="th">{t('supplier_id')}{panah('supplier')}</th><th className="th">{t('uraian')}{panah('uraian')}</th><th className="th text-right">{t('total')}{panah('total')}</th>
-            <th className="th text-right">{t('sisa')}{panah('sisa')}</th><th className="th">{t('status')}{panah('status')}</th><th className="th">{t('foto')}</th><th className="th" />
+            <th className="th text-right">{t('sisa')}{panah('sisa')}</th><th className="th">{t('status')}{panah('status')}</th><th className="th no-print">{t('foto')}</th><th className="th no-print" />
           </tr></thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {tampil.length === 0 && <tr><td className="td text-gray-500" colSpan={10}>{t('kosong')}</td></tr>}
@@ -261,12 +278,12 @@ export default function Pembelian() {
                   {n.sisa > 0 ? rp(n.sisa) : '-'}{n.lewat_tempo && ' ⚠'}
                 </td>
                 <td className="td">{badge(n)}</td>
-                <td className="td">
+                <td className="td no-print">
                   <div className="flex gap-1">{(n.foto || []).slice(0, 3).map((u) => (
                     <a key={u} href={u} target="_blank" rel="noreferrer"><img src={thumb(u)} alt="nota" className="h-8 w-8 rounded object-cover" /></a>
                   ))}</div>
                 </td>
-                <td className="td whitespace-nowrap text-right">
+                <td className="td no-print whitespace-nowrap text-right">
                   {n.sisa > 0 && <button className="font-medium text-eba-600 hover:underline" onClick={() => setBayarNota(n)}>{t('bayar')}</button>}
                   {n.sisa <= 0 && n.dibayar > 0 && <button className="text-gray-500 hover:underline" onClick={() => setBayarNota(n)}>{t('riwayat_bayar')}</button>}
                   <button className="ml-2 text-eba-600 hover:underline" onClick={() => ubah(n)}>{t('ubah')}</button>
